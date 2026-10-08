@@ -6,11 +6,15 @@
     <title>Radial Art</title>
     <style>
         :root {
-            --bg: #121212;
-            --panel: #1e1e1e;
+            --bg: #0d0d0d;
+            --panel: #161616;
+            --panel-border: #2a2a2a;
             --accent: #00d4ff;
-            --text: #e0e0e0;
+            --accent-hover: #33e0ff;
+            --text: #ffffff;
+            --text-muted: #a0a0a0;
         }
+        * { box-sizing: border-box; }
         body {
             margin: 0;
             overflow: hidden;
@@ -21,13 +25,13 @@
             height: 100vh;
         }
         #toolbar {
-            width: 280px;
+            width: 300px;
             background: var(--panel);
+            border-right: 1px solid var(--panel-border);
             padding: 20px;
             display: flex;
             flex-direction: column;
             gap: 16px;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.5);
             z-index: 10;
             overflow-y: auto;
         }
@@ -37,87 +41,126 @@
             justify-content: center;
             align-items: center;
             position: relative;
-            /* Checkerboard pattern to show transparency */
-            background-image: linear-gradient(45deg, #1a1a1a 25%, transparent 25%), linear-gradient(-45deg, #1a1a1a 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #1a1a1a 75%), linear-gradient(-45deg, transparent 75%, #1a1a1a 75%);
+            background-color: #0a0a0a;
+            background-image: 
+                linear-gradient(45deg, #111 25%, transparent 25%), 
+                linear-gradient(-45deg, #111 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #111 75%), 
+                linear-gradient(-45deg, transparent 75%, #111 75%);
             background-size: 20px 20px;
             background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
         }
         #canvas-wrapper {
             position: relative;
-            max-width: 95%;
-            max-height: 95%;
-            box-shadow: 0 0 30px rgba(0,0,0,0.6);
+            width: 80vmin;
+            height: 80vmin;
+            max-width: 1200px;
+            max-height: 1200px;
+            box-shadow: 0 0 40px rgba(0,0,0,0.8);
+            background: #ffffff; /* Default solid white */
         }
         #mainCanvas, #overlayCanvas {
-            display: block;
-            width: auto;
-            height: auto;
-            max-width: 100%;
-            max-height: 100%;
-            background: transparent;
-        }
-        #overlayCanvas {
             position: absolute;
             top: 0; left: 0;
-            pointer-events: none; /* Clicks pass through to mainCanvas */
+            width: 100%;
+            height: 100%;
+            display: block;
         }
         #mainCanvas {
             touch-action: none;
             cursor: crosshair;
+            z-index: 2;
         }
-        .group { border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 15px; }
+        #overlayCanvas {
+            pointer-events: none;
+            z-index: 3;
+        }
+        .group { border-bottom: 1px solid var(--panel-border); padding-bottom: 15px; margin-bottom: 5px; }
         .group:last-child { border-bottom: none; }
-        h3 { margin: 0 0 12px 0; font-size: 13px; text-transform: uppercase; color: var(--accent); letter-spacing: 1px; }
-        .control-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px;}
-        label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #888; }
-        input[type="range"] { width: 100%; accent-color: var(--accent); }
-        input[type="color"] { width: 100%; height: 35px; border: none; border-radius: 6px; cursor: pointer; background: none; }
-        select { width: 100%; padding: 8px; background: #333; color: #fff; border: 1px solid #444; border-radius: 4px; font-size: 14px; }
-        button {
-            background: var(--accent); color: #000; border: none; padding: 12px;
-            border-radius: 6px; font-weight: bold; cursor: pointer; transition: opacity 0.2s;
-            width: 100%;
-        }
-        button:hover { opacity: 0.8; }
-        button.secondary { background: #333; color: var(--text); }
-        .checkbox-group { flex-direction: row; align-items: center; gap: 10px; margin-top: 5px; }
-        .checkbox-group input { width: auto; accent-color: var(--accent); transform: scale(1.2); }
-        .checkbox-group label { text-transform: none; color: var(--text); cursor: pointer; font-size: 14px; letter-spacing: 0;}
-        h1 { font-size: 22px; margin: 0 0 10px 0; color: var(--accent); font-weight: 800; letter-spacing: -0.5px; text-align: center; }
+        h3 { margin: 0 0 12px 0; font-size: 12px; text-transform: uppercase; color: var(--accent); letter-spacing: 1.5px; font-weight: 700; }
+        .control-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+        label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); display: flex; justify-content: space-between; }
+        input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
+        input[type="color"] { width: 100%; height: 36px; border: 1px solid var(--panel-border); border-radius: 6px; cursor: pointer; background: var(--bg); padding: 2px; }
+        select { width: 100%; padding: 8px; background: var(--bg); color: var(--text); border: 1px solid var(--panel-border); border-radius: 6px; font-size: 13px; cursor: pointer; }
+        select:focus { outline: 1px solid var(--accent); }
         
+        button {
+            background: var(--accent); color: #000; border: none; padding: 10px;
+            border-radius: 6px; font-weight: 700; cursor: pointer; transition: all 0.2s;
+            width: 100%; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        button:hover { background: var(--accent-hover); }
+        button.secondary { background: #2a2a2a; color: var(--text); border: 1px solid var(--panel-border); }
+        button.secondary:hover { background: #333; }
+        button.active { background: var(--accent); color: #000; }
+        
+        .checkbox-group { flex-direction: row; align-items: center; gap: 10px; margin-top: 8px; }
+        .checkbox-group input { width: auto; accent-color: var(--accent); transform: scale(1.2); cursor: pointer; }
+        .checkbox-group label { text-transform: none; color: var(--text); cursor: pointer; font-size: 13px; letter-spacing: 0; margin: 0; }
+        
+        h1 { font-size: 20px; margin: 0 0 15px 0; color: var(--text); font-weight: 800; letter-spacing: -0.5px; text-align: center; border-bottom: 1px solid var(--panel-border); padding-bottom: 15px; }
+        h1 span { color: var(--accent); }
+
+        /* Tips Section */
+        .tips-box {
+            background: #1a1a1a;
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+        .tips-box strong { color: var(--text); }
+        .key { display: inline-block; background: #333; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 11px; color: var(--accent); border: 1px solid #444; }
+
         @media (max-width: 768px) {
             body { flex-direction: column; }
-            #toolbar { 
-                width: 100%; max-height: 40vh; padding: 15px; 
-                flex-direction: row; flex-wrap: wrap; align-items: flex-start; gap: 10px; 
-            }
-            .group { border-right: 1px solid #333; border-bottom: none; padding-right: 15px; margin-bottom: 0; min-width: 200px; flex: 1; }
-            h1 { width: 100%; margin-bottom: 5px; }
+            #toolbar { width: 100%; max-height: 45vh; border-right: none; border-bottom: 1px solid var(--panel-border); }
             #canvas-container { flex: 1; min-height: 0; }
+            #canvas-wrapper { width: 95vmin; height: 95vmin; }
         }
     </style>
 </head>
 <body>
     <div id="toolbar">
-        <h1>Radial Art</h1>
+        <h1>Radial <span>Art</span></h1>
         
         <div class="group">
             <h3>Brush</h3>
+            <div class="control-group">
+                <label>Shape</label>
+                <select id="brushShape">
+                    <option value="round">Round</option>
+                    <option value="square">Square</option>
+                    <option value="triangle">Triangle</option>
+                    <option value="star">Star</option>
+                </select>
+            </div>
             <div class="control-group">
                 <label>Color</label>
                 <input type="color" id="colorPicker" value="#00d4ff">
             </div>
             <div class="control-group">
-                <label>Size: <span id="sizeValue">10</span>px</label>
-                <input type="range" id="brushSize" min="1" max="100" value="10">
+                <label>Size: <span id="sizeValue">8</span>px</label>
+                <input type="range" id="brushSize" min="1" max="100" value="8">
             </div>
             <div class="control-group">
                 <label>Opacity: <span id="opacityValue">100</span>%</label>
                 <input type="range" id="brushOpacity" min="1" max="100" value="100">
             </div>
+            <div class="control-group checkbox-group">
+                <input type="checkbox" id="rainbowMode">
+                <label for="rainbowMode">Rainbow Gradient</label>
+            </div>
             <div class="control-group">
-                <label>Hardness: <span id="hardnessValue">0</span></label>
-                <input type="range" id="brushHardness" min="0" max="50" value="0">
+                <label>Blend Mode</label>
+                <select id="blendMode">
+                    <option value="source-over">Normal</option>
+                    <option value="lighter">Additive (Glow)</option>
+                    <option value="multiply">Multiply (Darken)</option>
+                </select>
             </div>
         </div>
 
@@ -131,14 +174,6 @@
                 <label>Rotation: <span id="rotValue">0</span>°</label>
                 <input type="range" id="symRotation" min="0" max="360" value="0">
             </div>
-            <div class="control-group">
-                <label>Center X: <span id="cxValue">50</span>%</label>
-                <input type="range" id="centerX" min="0" max="100" value="50">
-            </div>
-            <div class="control-group">
-                <label>Center Y: <span id="cyValue">50</span>%</label>
-                <input type="range" id="centerY" min="0" max="100" value="50">
-            </div>
             <div class="control-group checkbox-group">
                 <input type="checkbox" id="mirrorMode">
                 <label for="mirrorMode">Kaleidoscope (Mirror)</label>
@@ -147,15 +182,6 @@
 
         <div class="group">
             <h3>Canvas</h3>
-            <div class="control-group">
-                <label>Size</label>
-                <select id="canvasSize">
-                    <option value="1000x1000">Square (1000x1000)</option>
-                    <option value="1920x1080">HD (1920x1080)</option>
-                    <option value="800x1200">Portrait (800x1200)</option>
-                    <option value="2000x2000">High Res (2000x2000)</option>
-                </select>
-            </div>
             <div class="control-group">
                 <label>Background Color</label>
                 <input type="color" id="bgColor" value="#ffffff">
@@ -170,19 +196,33 @@
             </div>
         </div>
 
-        <div class="group actions" style="margin-top: auto;">
-            <div style="display:flex; gap:10px; margin-bottom:10px;">
+        <div class="group">
+            <div style="display:flex; gap:8px; margin-bottom:8px;">
                 <button id="undoBtn" class="secondary" style="flex:1">Undo</button>
-                <button id="clearBtn" class="secondary" style="flex:1">Clear</button>
+                <button id="redoBtn" class="secondary" style="flex:1">Redo</button>
             </div>
-            <button id="exportBtn">Export PNG</button>
+            <div style="display:flex; gap:8px; margin-bottom:8px;">
+                <button id="eraserBtn" class="secondary" style="flex:1">Eraser: OFF</button>
+                <button id="lockBtn" class="secondary" style="flex:1">Lock Mouse: OFF</button>
+            </div>
+            <button id="clearBtn" class="secondary">Clear Canvas</button>
+            <button id="exportBtn" style="margin-top: 8px;">Export PNG</button>
+        </div>
+
+        <div class="tips-box">
+            <strong>💡 Tips & Keybinds</strong><br>
+            • Click canvas to <strong>Lock Mouse</strong> (infinite drawing)<br>
+            • <span class="key">Esc</span> to unlock mouse<br>
+            • <span class="key">Ctrl</span>+<span class="key">Z</span> Undo &nbsp;|&nbsp; <span class="key">Ctrl</span>+<span class="key">Y</span> Redo<br>
+            • <span class="key">G</span> Toggle Guides &nbsp;|&nbsp; <span class="key">E</span> Toggle Eraser<br>
+            • <span class="key">L</span> Toggle Mouse Lock
         </div>
     </div>
 
     <div id="canvas-container">
         <div id="canvas-wrapper">
-            <canvas id="mainCanvas" width="1000" height="1000"></canvas>
-            <canvas id="overlayCanvas" width="1000" height="1000"></canvas>
+            <canvas id="mainCanvas" width="1200" height="1200"></canvas>
+            <canvas id="overlayCanvas" width="1200" height="1200"></canvas>
         </div>
     </div>
 
@@ -191,32 +231,39 @@
         const ctx = mainCanvas.getContext('2d', { willReadFrequently: true });
         const overlay = document.getElementById('overlayCanvas');
         const overlayCtx = overlay.getContext('2d');
+        const wrapper = document.getElementById('canvas-wrapper');
 
         // Offscreen background canvas
         const bgCanvas = document.createElement('canvas');
-        bgCanvas.width = mainCanvas.width;
-        bgCanvas.height = mainCanvas.height;
+        bgCanvas.width = 1200; bgCanvas.height = 1200;
         const bgCtx = bgCanvas.getContext('2d');
 
         let isDrawing = false;
         let lastX = 0, lastY = 0;
         let history = [];
         let historyStep = -1;
+        let isEraser = false;
+        let hue = 0;
+
+        // Pointer Lock State
+        let isPointerLocked = false;
+        let virtualX = 600, virtualY = 600;
 
         // UI Elements
         const colorPicker = document.getElementById('colorPicker');
         const brushSize = document.getElementById('brushSize');
         const brushOpacity = document.getElementById('brushOpacity');
-        const brushHardness = document.getElementById('brushHardness');
+        const brushShape = document.getElementById('brushShape');
+        const rainbowMode = document.getElementById('rainbowMode');
+        const blendMode = document.getElementById('blendMode');
         const segmentsInput = document.getElementById('segments');
         const symRotation = document.getElementById('symRotation');
-        const centerX = document.getElementById('centerX');
-        const centerY = document.getElementById('centerY');
         const mirrorMode = document.getElementById('mirrorMode');
-        const canvasSizeSelect = document.getElementById('canvasSize');
         const bgColor = document.getElementById('bgColor');
         const transparentBg = document.getElementById('transparentBg');
         const showGuides = document.getElementById('showGuides');
+        const eraserBtn = document.getElementById('eraserBtn');
+        const lockBtn = document.getElementById('lockBtn');
 
         function init() {
             updateBackground();
@@ -229,203 +276,30 @@
             historyStep++;
             if (historyStep < history.length) history.length = historyStep;
             history.push(mainCanvas.toDataURL());
-            if (history.length > 30) { history.shift(); historyStep--; }
+            if (history.length > 40) { history.shift(); historyStep--; }
         }
 
         function undo() {
             if (historyStep > 0) {
                 historyStep--;
-                const img = new Image();
-                img.src = history[historyStep];
-                img.onload = () => {
-                    ctx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
-                    ctx.drawImage(img, 0, 0);
-                };
+                restoreState();
             }
         }
 
-        function clearCanvas(pushHistory = true) {
-            ctx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
-            if (pushHistory) saveState();
-        }
-
-        function updateBackground() {
-            if (transparentBg.checked) {
-                bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
-            } else {
-                bgCtx.fillStyle = bgColor.value;
-                bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+        function redo() {
+            if (historyStep < history.length - 1) {
+                historyStep++;
+                restoreState();
             }
         }
 
-        function drawGuides() {
-            overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
-            if (!showGuides.checked) return;
-
-            const cx = (centerX.value / 100) * overlay.width;
-            const cy = (centerY.value / 100) * overlay.height;
-            const segments = parseInt(segmentsInput.value);
-            const angleStep = (Math.PI * 2) / segments;
-            const rotOffset = (symRotation.value * Math.PI) / 180;
-            
-            const maxDist = Math.sqrt(overlay.width**2 + overlay.height**2);
-
-            overlayCtx.strokeStyle = 'rgba(255, 80, 80, 0.6)';
-            overlayCtx.lineWidth = 2;
-
-            for (let i = 0; i < segments; i++) {
-                const angle = (i * angleStep) + rotOffset;
-                overlayCtx.beginPath();
-                overlayCtx.moveTo(cx, cy);
-                overlayCtx.lineTo(cx + Math.cos(angle) * maxDist, cy + Math.sin(angle) * maxDist);
-                overlayCtx.stroke();
-            }
-            
-            overlayCtx.beginPath();
-            overlayCtx.arc(cx, cy, 5, 0, Math.PI * 2);
-            overlayCtx.fillStyle = 'rgba(255, 80, 80, 0.8)';
-            overlayCtx.fill();
-        }
-
-        function getPos(e) {
-            const rect = mainCanvas.getBoundingClientRect();
-            const scaleX = mainCanvas.width / rect.width;
-            const scaleY = mainCanvas.height / rect.height;
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            return {
-                x: (clientX - rect.left) * scaleX,
-                y: (clientY - rect.top) * scaleY
+        function restoreState() {
+            const img = new Image();
+            img.src = history[historyStep];
+            img.onload = () => {
+                ctx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+                ctx.drawImage(img, 0, 0);
             };
         }
 
-        function startDrawing(e) {
-            if (e.target !== mainCanvas && e.target !== overlay) return; 
-            isDrawing = true;
-            const pos = getPos(e);
-            lastX = pos.x; lastY = pos.y;
-            
-            // FIX: Attach listeners to window so drawing continues if cursor leaves canvas
-            window.addEventListener('mousemove', draw);
-            window.addEventListener('mouseup', stopDrawing);
-            e.preventDefault();
-        }
-
-        function startTouch(e) {
-            isDrawing = true;
-            const pos = getPos(e);
-            lastX = pos.x; lastY = pos.y;
-            window.addEventListener('touchmove', draw, { passive: false });
-            window.addEventListener('touchend', stopDrawing);
-            window.addEventListener('touchcancel', stopDrawing);
-            e.preventDefault();
-        }
-
-        function draw(e) {
-            if (!isDrawing) return;
-            const pos = getPos(e);
-            
-            const cx = (centerX.value / 100) * mainCanvas.width;
-            const cy = (centerY.value / 100) * mainCanvas.height;
-            const segments = parseInt(segmentsInput.value);
-            const angleStep = (Math.PI * 2) / segments;
-            const rotOffset = (symRotation.value * Math.PI) / 180;
-
-            ctx.strokeStyle = colorPicker.value;
-            ctx.fillStyle = colorPicker.value; 
-            ctx.lineWidth = brushSize.value;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            
-            ctx.globalAlpha = brushOpacity.value / 100;
-            ctx.shadowBlur = brushHardness.value;
-            ctx.shadowColor = colorPicker.value;
-
-            for (let i = 0; i < segments; i++) {
-                ctx.save();
-                ctx.translate(cx, cy);
-                ctx.rotate(i * angleStep + rotOffset);
-                
-                ctx.beginPath();
-                ctx.moveTo(lastX - cx, lastY - cy);
-                ctx.lineTo(pos.x - cx, pos.y - cy);
-                ctx.stroke();
-
-                if (mirrorMode.checked) {
-                    ctx.scale(1, -1);
-                    ctx.beginPath();
-                    ctx.moveTo(lastX - cx, lastY - cy);
-                    ctx.lineTo(pos.x - cx, pos.y - cy);
-                    ctx.stroke();
-                }
-                ctx.restore();
-            }
-            
-            ctx.shadowBlur = 0;
-            ctx.globalAlpha = 1;
-
-            lastX = pos.x; lastY = pos.y;
-            e.preventDefault();
-        }
-
-        function stopDrawing() {
-            if (isDrawing) {
-                isDrawing = false;
-                saveState();
-                window.removeEventListener('mousemove', draw);
-                window.removeEventListener('mouseup', stopDrawing);
-                window.removeEventListener('touchmove', draw);
-                window.removeEventListener('touchend', stopDrawing);
-                window.removeEventListener('touchcancel', stopDrawing);
-            }
-        }
-
-        // Event Listeners
-        mainCanvas.addEventListener('mousedown', startDrawing);
-        mainCanvas.addEventListener('touchstart', startTouch, { passive: false });
-
-        brushSize.addEventListener('input', (e) => document.getElementById('sizeValue').textContent = e.target.value);
-        brushOpacity.addEventListener('input', (e) => document.getElementById('opacityValue').textContent = e.target.value);
-        brushHardness.addEventListener('input', (e) => document.getElementById('hardnessValue').textContent = e.target.value);
-        segmentsInput.addEventListener('input', (e) => document.getElementById('segmentValue').textContent = e.target.value);
-        symRotation.addEventListener('input', (e) => document.getElementById('rotValue').textContent = e.target.value);
-        centerX.addEventListener('input', (e) => document.getElementById('cxValue').textContent = e.target.value);
-        centerY.addEventListener('input', (e) => document.getElementById('cyValue').textContent = e.target.value);
-
-        [segmentsInput, symRotation, centerX, centerY, mirrorMode, showGuides].forEach(el => {
-            el.addEventListener('input', drawGuides);
-        });
-
-        canvasSizeSelect.addEventListener('change', (e) => {
-            const [w, h] = e.target.value.split('x').map(Number);
-            mainCanvas.width = w; mainCanvas.height = h;
-            overlay.width = w; overlay.height = h;
-            bgCanvas.width = w; bgCanvas.height = h;
-            init();
-        });
-
-        bgColor.addEventListener('input', updateBackground);
-        transparentBg.addEventListener('change', updateBackground);
-
-        document.getElementById('undoBtn').addEventListener('click', undo);
-        document.getElementById('clearBtn').addEventListener('click', () => clearCanvas(true));
-        
-        document.getElementById('exportBtn').addEventListener('click', () => {
-            const exportCanvas = document.createElement('canvas');
-            exportCanvas.width = mainCanvas.width;
-            exportCanvas.height = mainCanvas.height;
-            const expCtx = exportCanvas.getContext('2d');
-            
-            if (!transparentBg.checked) expCtx.drawImage(bgCanvas, 0, 0);
-            expCtx.drawImage(mainCanvas, 0, 0);
-            
-            const link = document.createElement('a');
-            link.download = `radial-art-${Date.now()}.png`;
-            link.href = exportCanvas.toDataURL('image/png');
-            link.click();
-        });
-
-        init();
-    </script>
-</body>
-</html>
+        function clearCanvas(pushHistory = true) {
