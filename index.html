@@ -26,6 +26,7 @@
         display: flex; height: 100vh; height: 100dvh;
         -webkit-tap-highlight-color: transparent;
     }
+    body.hide-ui #toolbar { display: none; }
 
     #toolbar {
         flex: 0 0 310px; background: var(--panel);
@@ -137,20 +138,23 @@
         display: grid; grid-template-columns: repeat(4, 1fr);
         gap: 5px; margin-top: 6px;
     }
-    .preset-btn {
-        padding: 6px 0; font-size: 11px; letter-spacing: 0;
-        text-transform: none;
-    }
+    .preset-btn { padding: 6px 0; font-size: 11px; letter-spacing: 0; text-transform: none; }
 
     .swatch-row {
-        display: grid; grid-template-columns: repeat(8, 1fr);
+        display: grid; grid-template-columns: repeat(9, 1fr);
         gap: 4px; margin-top: 6px;
     }
     .swatch {
         aspect-ratio: 1; border-radius: 4px; cursor: pointer;
         border: 1px solid rgba(255,255,255,0.1);
-        transition: transform .1s;
-        padding: 0;
+        transition: transform .1s; padding: 0; position: relative;
+    }
+    .swatch::after {
+        content: attr(data-key); position: absolute; inset: 0;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 9px; font-weight: 700; color: rgba(0,0,0,0.55);
+        text-shadow: 0 0 2px rgba(255,255,255,0.7);
+        pointer-events: none;
     }
     .swatch:hover { transform: scale(1.1); }
     .swatch.active { outline: 2px solid #fff; outline-offset: 1px; }
@@ -174,7 +178,10 @@
             linear-gradient(-45deg, transparent 75%, #131313 75%);
         background-size: 20px 20px;
         background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+        touch-action: none;
     }
+    #canvas-container.pan-ready { cursor: grab; }
+    #canvas-container.panning { cursor: grabbing; }
 
     #canvas-wrapper {
         position: relative;
@@ -182,6 +189,8 @@
         max-width: 100%; max-height: 100%;
         background-color: #fff;
         box-shadow: 0 0 40px rgba(0,0,0,.85);
+        will-change: transform;
+        transform-origin: center center;
     }
     #canvas-wrapper.transparent-bg {
         background-image:
@@ -199,6 +208,24 @@
     }
     #mainCanvas { z-index: 2; cursor: crosshair; touch-action: none; }
     #overlayCanvas { z-index: 3; pointer-events: none; }
+
+    #zoom-controls {
+        position: absolute; bottom: 20px; right: 20px;
+        display: flex; flex-direction: column; align-items: center;
+        gap: 6px; z-index: 20; user-select: none;
+    }
+    #zoom-controls button {
+        width: 36px; height: 36px; padding: 0; border-radius: 8px;
+        font-size: 15px; text-transform: none; letter-spacing: 0; line-height: 1;
+        background: rgba(30,30,30,0.9);
+        backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    }
+    #zoomLabel {
+        font-size: 10px; color: #888;
+        background: rgba(20,20,20,0.9);
+        padding: 3px 8px; border-radius: 4px;
+        font-variant-numeric: tabular-nums; font-weight: 600;
+    }
 
     #toast {
         position: fixed; bottom: 24px; left: 50%;
@@ -220,6 +247,7 @@
             padding: 12px;
         }
         #canvas-container { padding: 10px; }
+        #zoom-controls { bottom: 12px; right: 12px; }
     }
 </style>
 </head>
@@ -237,7 +265,19 @@
         <h3>Brush</h3>
 
         <div class="control-group">
-            <label for="brushShape">Shape</label>
+            <label for="brushType">Type</label>
+            <select id="brushType">
+                <option value="solid">Solid</option>
+                <option value="pencil">Pencil</option>
+                <option value="marker">Marker</option>
+                <option value="spray">Spray</option>
+                <option value="calligraphy">Calligraphy</option>
+                <option value="neon">Neon</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="brushShape">Stamp Shape</label>
             <select id="brushShape">
                 <option value="round">Round</option>
                 <option value="square">Square</option>
@@ -293,6 +333,23 @@
     </div>
 
     <div class="group">
+        <h3>Input</h3>
+
+        <div class="control-group">
+            <label for="smoothing">
+                <span>Smoothing</span><span class="val"><span id="smoothValue">2</span></span>
+            </label>
+            <input type="range" id="smoothing" min="0" max="20" value="2"
+                   title="Higher = smoother but slightly laggy">
+        </div>
+
+        <div class="control-group checkbox-group">
+            <input type="checkbox" id="pressureMode" checked>
+            <label for="pressureMode">Stylus Pressure</label>
+        </div>
+    </div>
+
+    <div class="group">
         <h3>Symmetry</h3>
 
         <div class="control-group">
@@ -317,7 +374,7 @@
 
         <div class="control-group checkbox-group">
             <input type="checkbox" id="directionLock">
-            <label for="directionLock">Direction Lock</label>
+            <label for="directionLock">Direction Lock <kbd>L</kbd></label>
         </div>
     </div>
 
@@ -340,6 +397,13 @@
         </div>
 
         <div class="control-group">
+            <label for="guidesOpacity">
+                <span>Guides Opacity</span><span class="val"><span id="guidesOpValue">60</span>%</span>
+            </label>
+            <input type="range" id="guidesOpacity" min="5" max="100" value="60">
+        </div>
+
+        <div class="control-group">
             <label for="guideColor">Guide Color</label>
             <input type="color" id="guideColor" value="#ff0055">
         </div>
@@ -358,7 +422,8 @@
             <button id="exportBtn">Export PNG</button>
         </div>
         <div class="btn-row">
-            <button id="resetSettingsBtn" title="Reset all settings to defaults">Reset Settings</button>
+            <button id="copyBtn" title="Copy to clipboard (Ctrl+C)">Copy</button>
+            <button id="resetSettingsBtn" title="Reset all settings">Reset</button>
         </div>
     </div>
 </div>
@@ -367,6 +432,12 @@
     <div id="canvas-wrapper">
         <canvas id="mainCanvas" width="1200" height="1200"></canvas>
         <canvas id="overlayCanvas" width="1200" height="1200"></canvas>
+    </div>
+    <div id="zoom-controls">
+        <button id="zoomInBtn" title="Zoom In (+)">+</button>
+        <button id="zoomOutBtn" title="Zoom Out (−)">−</button>
+        <button id="zoomResetBtn" title="Reset View (0)">⟲</button>
+        <span id="zoomLabel">100%</span>
     </div>
 </div>
 
@@ -391,21 +462,24 @@
     const CX = W / 2;
     const CY = H / 2;
     const MAX_HISTORY = 20;
-    const STORAGE_KEY = 'radial-art-settings-v1';
-    const RECENT_KEY  = 'radial-art-recent-colors-v1';
-    const MAX_RECENT  = 8;
+    const STORAGE_KEY = 'radial-art-settings-v2';
+    const RECENT_KEY  = 'radial-art-recent-colors-v2';
+    const MAX_RECENT  = 9;
 
     const bgCanvas = document.createElement('canvas');
     bgCanvas.width = W; bgCanvas.height = H;
     const bgCtx = bgCanvas.getContext('2d');
 
     const colorPicker    = $('colorPicker');
+    const brushType      = $('brushType');
     const brushSize      = $('brushSize');
     const brushOpacity   = $('brushOpacity');
     const brushSoftness  = $('brushSoftness');
     const brushShape     = $('brushShape');
     const rainbowMode    = $('rainbowMode');
     const blendMode      = $('blendMode');
+    const smoothingInput = $('smoothing');
+    const pressureMode   = $('pressureMode');
     const segmentsInput  = $('segments');
     const symRotation    = $('symRotation');
     const mirrorMode     = $('mirrorMode');
@@ -413,6 +487,7 @@
     const bgColor        = $('bgColor');
     const transparentBg  = $('transparentBg');
     const showGuides     = $('showGuides');
+    const guidesOpacity  = $('guidesOpacity');
     const guideColor     = $('guideColor');
     const eraserBtn      = $('eraserBtn');
     const undoBtn        = $('undoBtn');
@@ -420,7 +495,7 @@
     const swatchRow      = $('swatchRow');
     const presetRow      = $('presetRow');
 
-    let isDrawing    = false;
+    let isDrawing     = false;
     let activePointer = null;
     let startX = 0, startY = 0;
     let lastX  = 0, lastY  = 0;
@@ -430,19 +505,32 @@
     let isEraser = false;
     let cursorX = -1, cursorY = -1;
     let cursorInside = false;
+    let currentPressure = 0.5;
+    let currentPointerType = 'mouse';
+    let lastSavePushTime = 0;
 
     let history = [];
     let historyStep = -1;
-
     let recentColors = [];
 
     const PRESETS = [2, 3, 4, 6, 8, 12, 16, 24];
+
+    const view = { zoom: 1, panX: 0, panY: 0 };
+    let spaceDown = false;
+    let isPanning = false;
+    let panStartX = 0, panStartY = 0, panViewX = 0, panViewY = 0;
 
     function toast(msg, ms = 1400) {
         toastEl.textContent = msg;
         toastEl.classList.add('show');
         clearTimeout(toast._t);
         toast._t = setTimeout(() => toastEl.classList.remove('show'), ms);
+    }
+
+    function clampInt(v, lo, hi) {
+        v = parseInt(v, 10);
+        if (isNaN(v)) return lo;
+        return Math.max(lo, Math.min(hi, v));
     }
 
     /* ---------------- History ---------------- */
@@ -473,7 +561,6 @@
         undoBtn.disabled = historyStep <= 0;
         redoBtn.disabled = historyStep >= history.length - 1;
     }
-
     function resetCtxState() {
         ctx.globalAlpha = 1;
         ctx.globalCompositeOperation = 'source-over';
@@ -498,7 +585,7 @@
         wrapper.style.backgroundColor = transparent ? 'transparent' : bgColor.value;
     }
 
-    /* ---------------- Overlay (guides + cursor preview) ---------------- */
+    /* ---------------- Overlay ---------------- */
     function renderOverlay() {
         overlayCtx.clearRect(0, 0, W, H);
 
@@ -507,8 +594,10 @@
             const angleStep = (Math.PI * 2) / segments;
             const rotOffset = (parseFloat(symRotation.value) * Math.PI) / 180;
             const maxDist = Math.hypot(W, H);
+            const alpha = clampInt(guidesOpacity.value, 5, 100) / 100;
 
             overlayCtx.save();
+            overlayCtx.globalAlpha = alpha;
             overlayCtx.strokeStyle = guideColor.value;
             overlayCtx.lineWidth = 1.5;
             overlayCtx.setLineDash([8, 8]);
@@ -527,8 +616,8 @@
             overlayCtx.restore();
         }
 
-        if (cursorInside && !isDrawing) {
-            const size = clampInt(brushSize.value, 1, 120);
+        if (cursorInside && !isDrawing && !isPanning) {
+            const size = effectiveBrushSize();
             overlayCtx.save();
             overlayCtx.strokeStyle = 'rgba(0,0,0,0.55)';
             overlayCtx.lineWidth = 2;
@@ -544,25 +633,37 @@
         }
     }
 
-    /* ---------------- Brush helpers ---------------- */
-    function clampInt(v, lo, hi) {
-        v = parseInt(v, 10);
-        if (isNaN(v)) return lo;
-        return Math.max(lo, Math.min(hi, v));
+    /* ---------------- Brush style ---------------- */
+    function effectiveBrushSize() {
+        let size = clampInt(brushSize.value, 1, 120);
+        if (pressureMode.checked && currentPointerType === 'pen' && currentPressure > 0) {
+            size *= 0.25 + currentPressure * 0.75;
+        }
+        return Math.max(0.5, size);
     }
+
     function currentColor() {
         return (rainbowMode.checked && !isEraser)
             ? `hsl(${hue.toFixed(1)}, 100%, 50%)`
             : colorPicker.value;
     }
+
     function applyBrushStyle() {
         const color = currentColor();
+        const type = brushType.value;
         const softness = clampInt(brushSoftness.value, 0, 60);
 
         ctx.globalAlpha = clampInt(brushOpacity.value, 1, 100) / 100;
         ctx.globalCompositeOperation = isEraser ? 'destination-out' : blendMode.value;
 
-        if (softness > 0) {
+        if (type === 'neon' && !isEraser) {
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.shadowBlur = effectiveBrushSize() * 0.9;
+            ctx.shadowColor = color;
+        } else if (type === 'marker' && !isEraser) {
+            ctx.globalAlpha *= 0.55;
+            ctx.shadowBlur = 0;
+        } else if (softness > 0 && !isEraser) {
             ctx.shadowBlur = softness;
             ctx.shadowColor = color;
         } else {
@@ -571,7 +672,7 @@
 
         ctx.fillStyle = color;
         ctx.strokeStyle = color;
-        ctx.lineWidth = clampInt(brushSize.value, 1, 120);
+        ctx.lineWidth = effectiveBrushSize();
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
     }
@@ -652,58 +753,120 @@
         }
     }
 
-    /* ---------------- Drawing ---------------- */
-    function stampDot() {
-        const size = clampInt(brushSize.value, 1, 120);
-        const shape = brushShape.value;
-        applyBrushStyle();
-        forEachSymmetry(() => {
-            drawShapePath(lastX - CX, lastY - CY, size, shape, 0);
-        });
+    /* ---------------- Brush type renderers ---------------- */
+    function paintStampLocal(x, y, size, shape, angle) {
+        drawShapePath(x, y, size, shape, angle);
     }
 
-    function drawSegment(x0, y0, x1, y1, smooth) {
-        const size = clampInt(brushSize.value, 1, 120);
+    function paintSprayCluster(x, y, size) {
+        const count = Math.max(4, Math.round(size * 0.6));
+        const radius = size * 0.55;
+        const dotSize = Math.max(0.5, size * 0.18);
+        for (let i = 0; i < count; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const r = Math.sqrt(Math.random()) * radius;
+            drawShapePath(x + Math.cos(a) * r, y + Math.sin(a) * r, dotSize, 'round', 0);
+        }
+    }
+
+    function paintCalligraphyNib(x, y, size) {
+        const nibA = Math.PI / 4;
+        const nx = Math.cos(nibA) * size * 0.5;
+        const ny = Math.sin(nibA) * size * 0.5;
+        ctx.beginPath();
+        ctx.moveTo(x - nx, y - ny);
+        ctx.lineTo(x + nx, y + ny);
+        ctx.lineWidth = Math.max(0.5, size * 0.13);
+        ctx.lineCap = 'round';
+        ctx.stroke();
+    }
+
+    function renderSegment(x0, y0, x1, y1, smooth) {
+        const type = brushType.value;
         const shape = brushShape.value;
+        const size = effectiveBrushSize();
+        const dx = x1 - x0, dy = y1 - y0;
+        const dist = Math.hypot(dx, dy);
+        if (dist < 0.001) return;
+        const angle = Math.atan2(dy, dx);
+
         applyBrushStyle();
 
         forEachSymmetry(() => {
             const ax = x0 - CX, ay = y0 - CY;
             const bx = x1 - CX, by = y1 - CY;
 
-            if (shape === 'round') {
+            if (type === 'solid' && shape === 'round' && smooth) {
                 ctx.beginPath();
-                if (smooth) {
-                    const mx = ((x0 + x1) / 2) - CX;
-                    const my = ((y0 + y1) / 2) - CY;
-                    const pmx = prevMidX - CX;
-                    const pmy = prevMidY - CY;
-                    ctx.moveTo(pmx, pmy);
-                    ctx.quadraticCurveTo(ax, ay, mx, my);
-                } else {
-                    ctx.moveTo(ax, ay);
-                    ctx.lineTo(bx, by);
-                }
+                const pmx = prevMidX - CX, pmy = prevMidY - CY;
+                const mx = ((x0 + x1) / 2) - CX, my = ((y0 + y1) / 2) - CY;
+                ctx.moveTo(pmx, pmy);
+                ctx.quadraticCurveTo(ax, ay, mx, my);
                 ctx.stroke();
                 return;
             }
 
-            const localAngle = Math.atan2(by - ay, bx - ax);
-            const dist = Math.hypot(bx - ax, by - ay);
-            const spacing = Math.max(1, size / 4);
-            const steps = Math.min(400, Math.max(1, Math.ceil(dist / spacing)));
+            let spacing, jitter = 0, scatter = 0, dotSize = size, angleOffset = 0;
+
+            switch (type) {
+                case 'pencil':   spacing = Math.max(0.6, size * 0.14); jitter = size * 0.14; dotSize = size * 0.7; break;
+                case 'marker':   spacing = Math.max(0.6, size * 0.1);  dotSize = size * 1.1; angleOffset = angle; break;
+                case 'spray':    spacing = Math.max(0.5, size * 0.35); scatter = 1; break;
+                case 'calligraphy': spacing = Math.max(0.5, size * 0.08); break;
+                case 'neon':     spacing = Math.max(0.7, size * 0.16); angleOffset = angle; break;
+                default:         spacing = Math.max(0.7, size * 0.22); angleOffset = angle;
+            }
+
+            const steps = Math.max(1, Math.min(600, Math.ceil(dist / spacing)));
+
             for (let s = 1; s <= steps; s++) {
                 const t = s / steps;
-                drawShapePath(
-                    ax + (bx - ax) * t,
-                    ay + (by - ay) * t,
-                    size, shape, localAngle
-                );
+                let px = ax + (bx - ax) * t;
+                let py = ay + (by - ay) * t;
+
+                if (jitter > 0) {
+                    px += (Math.random() - 0.5) * jitter * 2;
+                    py += (Math.random() - 0.5) * jitter * 2;
+                }
+
+                if (scatter) {
+                    paintSprayCluster(px, py, size);
+                } else if (type === 'calligraphy') {
+                    paintCalligraphyNib(px, py, size);
+                } else {
+                    paintStampLocal(px, py, dotSize, shape, angleOffset);
+                }
             }
         });
     }
 
-    /* ---------------- Pointer ---------------- */
+    function stampDot() {
+        const type = brushType.value;
+        const shape = brushShape.value;
+        const size = effectiveBrushSize();
+
+        applyBrushStyle();
+        forEachSymmetry(() => {
+            const lx = lastX - CX, ly = lastY - CY;
+            if (type === 'spray') {
+                paintSprayCluster(lx, ly, size);
+            } else if (type === 'calligraphy') {
+                paintCalligraphyNib(lx, ly, size);
+            } else if (type === 'marker') {
+                paintStampLocal(lx, ly, size * 1.1, shape, 0);
+            } else if (type === 'pencil') {
+                for (let i = 0; i < 3; i++) {
+                    const jx = (Math.random() - 0.5) * size * 0.28;
+                    const jy = (Math.random() - 0.5) * size * 0.28;
+                    paintStampLocal(lx + jx, ly + jy, size * 0.7, shape, 0);
+                }
+            } else {
+                paintStampLocal(lx, ly, size, shape, 0);
+            }
+        });
+    }
+
+    /* ---------------- Pointer input ---------------- */
     function getPos(e) {
         const rect = mainCanvas.getBoundingClientRect();
         return {
@@ -713,10 +876,14 @@
     }
 
     function onPointerDown(e) {
-        if (activePointer !== null) return;
+        if (spaceDown || e.button === 1) return;
         if (e.pointerType === 'mouse' && e.button !== 0) return;
+        if (activePointer !== null) return;
         e.preventDefault();
+
         activePointer = e.pointerId;
+        currentPointerType = e.pointerType;
+        currentPressure = e.pressure > 0 ? e.pressure : 0.5;
 
         const p = getPos(e);
         isDrawing = true;
@@ -729,11 +896,15 @@
     }
 
     function onPointerMove(e) {
-        // Update cursor preview
         const preview = getPos(e);
         cursorX = preview.x;
         cursorY = preview.y;
         cursorInside = true;
+
+        if (isDrawing && e.pointerId === activePointer) {
+            currentPressure = e.pressure > 0 ? e.pressure : 0.5;
+            currentPointerType = e.pointerType;
+        }
 
         if (!isDrawing || e.pointerId !== activePointer) {
             renderOverlay();
@@ -758,21 +929,31 @@
             }
         }
 
+        const smoothVal = clampInt(smoothingInput.value, 0, 20);
+        const minDist = 0.4 + smoothVal * 0.08;
+
         const dist = Math.hypot(p.x - lastX, p.y - lastY);
-        if (dist < 0.75) return;
+        if (dist < minDist) return;
 
         if (rainbowMode.checked && !isEraser) {
             hue = (hue + dist * 0.45) % 360;
         }
 
-        const smooth = brushShape.value === 'round';
+        const smoothCurve = brushType.value === 'solid' && brushShape.value === 'round';
         const midX = (lastX + p.x) / 2;
         const midY = (lastY + p.y) / 2;
 
-        drawSegment(lastX, lastY, p.x, p.y, smooth);
+        renderSegment(lastX, lastY, p.x, p.y, smoothCurve);
 
         lastX = p.x; lastY = p.y;
         prevMidX = midX; prevMidY = midY;
+
+        // Throttled incremental history for long strokes
+        const now = performance.now();
+        if (now - lastSavePushTime > 4000) {
+            lastSavePushTime = now;
+            saveState();
+        }
     }
 
     function onPointerUp(e) {
@@ -796,14 +977,98 @@
     mainCanvas.addEventListener('pointerleave', () => { cursorInside = false; renderOverlay(); });
     mainCanvas.addEventListener('contextmenu', e => e.preventDefault());
 
-    /* ---------------- Export ---------------- */
-    function exportPNG() {
+    /* ---------------- Pan / Zoom ---------------- */
+    function applyView() {
+        wrapper.style.transform = `translate(${view.panX}px, ${view.panY}px) scale(${view.zoom})`;
+        $('zoomLabel').textContent = Math.round(view.zoom * 100) + '%';
+    }
+
+    function zoomAtPoint(factor, mx, my) {
+        const oldZoom = view.zoom;
+        const newZoom = Math.max(0.15, Math.min(8, oldZoom * factor));
+        if (Math.abs(newZoom - oldZoom) < 0.0001) return;
+
+        const rect = container.getBoundingClientRect();
+        const ccx = rect.width / 2;
+        const ccy = rect.height / 2;
+        const wcx = ccx + view.panX;
+        const wcy = ccy + view.panY;
+
+        const ratio = newZoom / oldZoom;
+        const newWcx = mx - (mx - wcx) * ratio;
+        const newWcy = my - (my - wcy) * ratio;
+
+        view.zoom = newZoom;
+        view.panX = newWcx - ccx;
+        view.panY = newWcy - ccy;
+        applyView();
+    }
+
+    function zoomCenter(factor) {
+        const rect = container.getBoundingClientRect();
+        const oldZoom = view.zoom;
+        const newZoom = Math.max(0.15, Math.min(8, oldZoom * factor));
+        if (Math.abs(newZoom - oldZoom) < 0.0001) return;
+        const ratio = newZoom / oldZoom;
+        view.panX *= ratio;
+        view.panY *= ratio;
+        view.zoom = newZoom;
+        applyView();
+    }
+
+    container.addEventListener('wheel', e => {
+        if (isDrawing) return;
+        e.preventDefault();
+        const rect = container.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+        zoomAtPoint(factor, mx, my);
+    }, { passive: false });
+
+    container.addEventListener('pointerdown', e => {
+        if (!spaceDown && e.button !== 1) return;
+        e.preventDefault();
+        isPanning = true;
+        panStartX = e.clientX;
+        panStartY = e.clientY;
+        panViewX = view.panX;
+        panViewY = view.panY;
+        container.classList.add('panning');
+    });
+    window.addEventListener('pointermove', e => {
+        if (!isPanning) return;
+        view.panX = panViewX + (e.clientX - panStartX);
+        view.panY = panViewY + (e.clientY - panStartY);
+        applyView();
+    });
+    window.addEventListener('pointerup', () => {
+        if (isPanning) {
+            isPanning = false;
+            container.classList.remove('panning');
+        }
+    });
+
+    $('zoomInBtn').addEventListener('click', () => zoomCenter(1.2));
+    $('zoomOutBtn').addEventListener('click', () => zoomCenter(1 / 1.2));
+    $('zoomResetBtn').addEventListener('click', () => {
+        view.zoom = 1; view.panX = 0; view.panY = 0;
+        applyView();
+        toast('View reset', 800);
+    });
+
+    /* ---------------- Export / Copy ---------------- */
+    function renderComposite() {
         const out = document.createElement('canvas');
         out.width = W; out.height = H;
         const octx = out.getContext('2d');
         if (!transparentBg.checked) octx.drawImage(bgCanvas, 0, 0);
         octx.drawImage(mainCanvas, 0, 0);
+        return out;
+    }
 
+    function exportPNG() {
+        const out = renderComposite();
         const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
         const link = document.createElement('a');
         link.download = `radial-art-${stamp}.png`;
@@ -812,6 +1077,18 @@
         link.click();
         link.remove();
         toast('Exported PNG');
+    }
+
+    async function copyToClipboard() {
+        try {
+            const out = renderComposite();
+            const blob = await new Promise(r => out.toBlob(r, 'image/png'));
+            if (!blob) throw new Error('Blob failed');
+            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+            toast('Copied to clipboard');
+        } catch (err) {
+            toast('Copy failed: ' + (err.message || err), 2200);
+        }
     }
 
     /* ---------------- Recent colors ---------------- */
@@ -825,7 +1102,7 @@
         try { localStorage.setItem(RECENT_KEY, JSON.stringify(recentColors)); } catch (_) {}
     }
     function pushRecentColor(color) {
-        color = color.toLowerCase();
+        color = String(color).toLowerCase();
         recentColors = [color, ...recentColors.filter(c => c !== color)].slice(0, MAX_RECENT);
         saveRecentColors();
         renderSwatches();
@@ -834,13 +1111,14 @@
         swatchRow.innerHTML = '';
         const active = colorPicker.value.toLowerCase();
         for (let i = 0; i < MAX_RECENT; i++) {
-            const color = recentColors[i] || null;
+            const color = recentColors[i];
             const b = document.createElement('button');
             b.type = 'button';
             b.className = 'swatch' + (color === active ? ' active' : '');
             if (color) {
                 b.style.background = color;
-                b.title = color;
+                b.title = `${color}  (${i + 1})`;
+                b.dataset.key = i + 1;
                 b.addEventListener('click', () => {
                     colorPicker.value = color;
                     pushRecentColor(color);
@@ -855,7 +1133,7 @@
         }
     }
 
-    /* ---------------- Preset buttons ---------------- */
+    /* ---------------- Presets ---------------- */
     function renderPresets() {
         presetRow.innerHTML = '';
         PRESETS.forEach(n => {
@@ -873,25 +1151,28 @@
         });
     }
 
-    /* ---------------- Settings persistence ---------------- */
+    /* ---------------- Settings ---------------- */
     const SETTINGS_MAP = [
-        ['brushShape',   brushShape,   'value'],
-        ['colorPicker',  colorPicker,  'value'],
-        ['brushSize',    brushSize,    'value'],
-        ['brushOpacity', brushOpacity, 'value'],
-        ['brushSoftness',brushSoftness,'value'],
-        ['rainbowMode',  rainbowMode,  'checked'],
-        ['blendMode',    blendMode,    'value'],
-        ['segments',     segmentsInput,'value'],
-        ['symRotation',  symRotation,  'value'],
-        ['mirrorMode',   mirrorMode,   'checked'],
-        ['directionLock',directionLock,'checked'],
-        ['bgColor',      bgColor,      'value'],
-        ['transparentBg',transparentBg,'checked'],
-        ['showGuides',   showGuides,   'checked'],
-        ['guideColor',   guideColor,   'value'],
+        ['brushType',     brushType,     'value'],
+        ['brushShape',    brushShape,    'value'],
+        ['colorPicker',   colorPicker,   'value'],
+        ['brushSize',     brushSize,     'value'],
+        ['brushOpacity',  brushOpacity,  'value'],
+        ['brushSoftness', brushSoftness, 'value'],
+        ['rainbowMode',   rainbowMode,   'checked'],
+        ['blendMode',     blendMode,     'value'],
+        ['smoothing',     smoothingInput,'value'],
+        ['pressureMode',  pressureMode,  'checked'],
+        ['segments',      segmentsInput, 'value'],
+        ['symRotation',   symRotation,   'value'],
+        ['mirrorMode',    mirrorMode,    'checked'],
+        ['directionLock', directionLock, 'checked'],
+        ['bgColor',       bgColor,       'value'],
+        ['transparentBg', transparentBg, 'checked'],
+        ['showGuides',    showGuides,    'checked'],
+        ['guidesOpacity', guidesOpacity, 'value'],
+        ['guideColor',    guideColor,    'value'],
     ];
-
     function persistSettings() {
         const data = {};
         SETTINGS_MAP.forEach(([key, el, prop]) => { data[key] = el[prop]; });
@@ -908,6 +1189,7 @@
         } catch (_) {}
     }
     function resetSettings() {
+        brushType.value = 'solid';
         brushShape.value = 'round';
         colorPicker.value = '#000000';
         brushSize.value = 8;
@@ -915,6 +1197,8 @@
         brushSoftness.value = 0;
         rainbowMode.checked = false;
         blendMode.value = 'source-over';
+        smoothingInput.value = 2;
+        pressureMode.checked = true;
         segmentsInput.value = 8;
         symRotation.value = 0;
         mirrorMode.checked = false;
@@ -922,6 +1206,7 @@
         bgColor.value = '#ffffff';
         transparentBg.checked = false;
         showGuides.checked = true;
+        guidesOpacity.value = 60;
         guideColor.value = '#ff0055';
         syncAllLabels();
         updateBackground();
@@ -935,8 +1220,10 @@
         $('sizeValue').textContent = brushSize.value;
         $('opacityValue').textContent = brushOpacity.value;
         $('softnessValue').textContent = brushSoftness.value;
+        $('smoothValue').textContent = smoothingInput.value;
         $('segmentValue').textContent = segmentsInput.value;
         $('rotValue').textContent = symRotation.value;
+        $('guidesOpValue').textContent = guidesOpacity.value;
     }
     function bindRangeLabel(input, labelId) {
         const label = $(labelId);
@@ -960,15 +1247,17 @@
     bindRangeLabel(brushSize, 'sizeValue');
     bindRangeLabel(brushOpacity, 'opacityValue');
     bindRangeLabel(brushSoftness, 'softnessValue');
+    bindRangeLabel(smoothingInput, 'smoothValue');
     bindRangeLabel(segmentsInput, 'segmentValue');
     bindRangeLabel(symRotation, 'rotValue');
+    bindRangeLabel(guidesOpacity, 'guidesOpValue');
 
-    [segmentsInput, symRotation, mirrorMode, showGuides, guideColor].forEach(el => {
+    [segmentsInput, symRotation, mirrorMode, showGuides, guideColor, guidesOpacity].forEach(el => {
         el.addEventListener('input', () => { renderOverlay(); persistSettings(); });
         el.addEventListener('change', () => { renderOverlay(); persistSettings(); });
     });
 
-    [brushSize, brushOpacity, brushSoftness, brushShape, blendMode].forEach(el => {
+    [brushSize, brushOpacity, brushSoftness, brushShape, brushType, blendMode, smoothingInput, pressureMode].forEach(el => {
         el.addEventListener('input', () => { renderOverlay(); persistSettings(); });
         el.addEventListener('change', persistSettings);
     });
@@ -985,13 +1274,14 @@
         isEraser = !isEraser;
         eraserBtn.textContent = isEraser ? 'Eraser: ON' : 'Eraser: OFF';
         eraserBtn.classList.toggle('active', isEraser);
-        toast(isEraser ? 'Eraser ON' : 'Eraser OFF', 900);
+        toast(isEraser ? 'Eraser ON' : 'Eraser OFF', 800);
     });
 
     undoBtn.addEventListener('click', undo);
     redoBtn.addEventListener('click', redo);
     $('clearBtn').addEventListener('click', () => { clearCanvas(true); toast('Canvas cleared'); });
     $('exportBtn').addEventListener('click', exportPNG);
+    $('copyBtn').addEventListener('click', copyToClipboard);
     $('resetSettingsBtn').addEventListener('click', resetSettings);
 
     $('randomColorBtn').addEventListener('click', () => {
@@ -1015,8 +1305,8 @@
     }
     function toggleFullscreen() {
         if (!document.fullscreenElement) {
-            (document.documentElement.requestFullscreen ||
-             document.documentElement.webkitRequestFullscreen || (() => {})).call(document.documentElement);
+            const el = document.documentElement;
+            (el.requestFullscreen || el.webkitRequestFullscreen || (() => {})).call(el);
         } else {
             (document.exitFullscreen || document.webkitExitFullscreen || (() => {})).call(document);
         }
@@ -1028,14 +1318,25 @@
         const isTypingField = active && (
             active.tagName === 'TEXTAREA' ||
             active.tagName === 'SELECT' ||
+            active.tagName === 'BUTTON' ||
             (active.tagName === 'INPUT' && active.type !== 'range')
         );
+
+        if (e.code === 'Space' && !isTypingField && !spaceDown) {
+            spaceDown = true;
+            container.classList.add('pan-ready');
+            e.preventDefault();
+            return;
+        }
+
         const mod = e.ctrlKey || e.metaKey;
         const key = e.key.toLowerCase();
 
         if (mod && key === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
         if (mod && key === 'y') { e.preventDefault(); redo(); return; }
         if (mod && key === 's') { e.preventDefault(); exportPNG(); return; }
+        if (mod && key === 'c') { e.preventDefault(); copyToClipboard(); return; }
+
         if (isTypingField) return;
 
         switch (key) {
@@ -1047,10 +1348,24 @@
                 return;
             case 'r': rainbowMode.click(); persistSettings(); return;
             case 'm': mirrorMode.click(); renderOverlay(); persistSettings(); return;
+            case 'l':
+                directionLock.click();
+                persistSettings();
+                toast(directionLock.checked ? 'Direction Lock ON' : 'Direction Lock OFF', 800);
+                return;
             case 't': transparentBg.click(); return;
             case 'e': eraserBtn.click(); return;
-            case 'g': showGuides.checked = !showGuides.checked; renderOverlay(); persistSettings(); return;
+            case 'g':
+                showGuides.checked = !showGuides.checked;
+                renderOverlay();
+                persistSettings();
+                return;
             case 'f': toggleFullscreen(); return;
+            case 'tab':
+                e.preventDefault();
+                document.body.classList.toggle('hide-ui');
+                toast(document.body.classList.contains('hide-ui') ? 'UI hidden — Tab to show' : 'UI shown', 1400);
+                return;
             case '[':
                 brushSize.value = Math.max(1, clampInt(brushSize.value, 1, 120) - 2);
                 brushSize.dispatchEvent(new Event('input'));
@@ -1059,6 +1374,38 @@
                 brushSize.value = Math.min(120, clampInt(brushSize.value, 1, 120) + 2);
                 brushSize.dispatchEvent(new Event('input'));
                 return;
+            case '0':
+                view.zoom = 1; view.panX = 0; view.panY = 0;
+                applyView();
+                toast('View reset', 800);
+                return;
+            case '=':
+            case '+':
+                zoomCenter(1.15);
+                return;
+            case '-':
+            case '_':
+                zoomCenter(1 / 1.15);
+                return;
+        }
+
+        if (/^[1-9]$/.test(key)) {
+            const idx = parseInt(key, 10) - 1;
+            if (recentColors[idx]) {
+                colorPicker.value = recentColors[idx];
+                pushRecentColor(recentColors[idx]);
+                persistSettings();
+            }
+            return;
+        }
+    });
+
+    window.addEventListener('keyup', e => {
+        if (e.code === 'Space') {
+            spaceDown = false;
+            container.classList.remove('pan-ready');
+            isPanning = false;
+            container.classList.remove('panning');
         }
     });
 
@@ -1079,10 +1426,10 @@
     updateBackground();
     clearCanvas(false);
     renderOverlay();
+    applyView();
     saveState();
     updateHistoryButtons();
 
-    // Seed default swatches if empty
     if (recentColors.length === 0) {
         ['#000000', '#ffffff', '#ff0055', '#5b8cff', '#00e0a4'].forEach(pushRecentColor);
     }
