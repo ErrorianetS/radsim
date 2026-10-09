@@ -1,344 +1,552 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Radial Art</title>
-    <style>
-        :root {
-            --bg: #0d0d0d;
-            --panel: #161616;
-            --panel-border: #2a2a2a;
-            --text: #ffffff;
-            --text-muted: #cccccc;
-            --btn-bg: #2a2a2a;
-            --btn-hover: #3a3a3a;
-        }
-        * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            overflow: hidden;
-            background: var(--bg);
-            color: var(--text);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            display: flex;
-            height: 100vh;
-        }
-        #toolbar {
-            width: 300px;
-            background: var(--panel);
-            border-right: 1px solid var(--panel-border);
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            z-index: 10;
-            overflow-y: auto;
-        }
-        #canvas-container {
-            flex: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-            background-color: #0a0a0a;
-            background-image: 
-                linear-gradient(45deg, #111 25%, transparent 25%), 
-                linear-gradient(-45deg, #111 25%, transparent 25%), 
-                linear-gradient(45deg, transparent 75%, #111 75%), 
-                linear-gradient(-45deg, transparent 75%, #111 75%);
-            background-size: 20px 20px;
-            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
-        }
-        #canvas-wrapper {
-            position: relative;
-            width: 80vmin;
-            height: 80vmin;
-            max-width: 1200px;
-            max-height: 1200px;
-            box-shadow: 0 0 40px rgba(0,0,0,0.8);
-            background-color: #ffffff;
-        }
-        #mainCanvas, #overlayCanvas {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%;
-            height: 100%;
-            display: block;
-            background: transparent;
-        }
-        #mainCanvas { cursor: crosshair; z-index: 2; touch-action: none; }
-        #overlayCanvas { pointer-events: none; z-index: 3; }
-        
-        .group { border-bottom: 1px solid var(--panel-border); padding-bottom: 15px; margin-bottom: 5px; }
-        .group:last-child { border-bottom: none; }
-        h3 { margin: 0 0 12px 0; font-size: 12px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 1.5px; font-weight: 700; }
-        .control-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
-        label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); display: flex; justify-content: space-between; }
-        input[type="range"] { width: 100%; accent-color: var(--text); cursor: pointer; }
-        input[type="color"] { width: 100%; height: 36px; border: 1px solid var(--panel-border); border-radius: 6px; cursor: pointer; background: var(--bg); padding: 2px; }
-        select { width: 100%; padding: 8px; background: var(--bg); color: var(--text); border: 1px solid var(--panel-border); border-radius: 6px; font-size: 13px; cursor: pointer; }
-        
-        button {
-            background: var(--btn-bg); color: var(--text); border: 1px solid var(--panel-border); 
-            padding: 10px; border-radius: 6px; font-weight: 700; cursor: pointer; 
-            transition: all 0.2s; width: 100%; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;
-        }
-        button:hover { background: var(--btn-hover); }
-        button.active { background: var(--text); color: var(--bg); border-color: var(--text); }
-        
-        .checkbox-group { flex-direction: row; align-items: center; gap: 10px; margin-top: 8px; }
-        .checkbox-group input { width: auto; accent-color: var(--text); transform: scale(1.2); cursor: pointer; }
-        .checkbox-group label { text-transform: none; color: var(--text); cursor: pointer; font-size: 13px; letter-spacing: 0; margin: 0; }
-        
-        h1 { font-size: 20px; margin: 0 0 15px 0; color: var(--text); font-weight: 800; letter-spacing: -0.5px; text-align: center; border-bottom: 1px solid var(--panel-border); padding-bottom: 15px; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="color-scheme" content="dark">
+<title>Radial Art — Kaleidoscope Drawing</title>
+<style>
+    :root {
+        --bg: #0d0d0d;
+        --panel: #161616;
+        --panel-border: #2a2a2a;
+        --text: #ffffff;
+        --text-muted: #9a9a9a;
+        --btn-bg: #2a2a2a;
+        --btn-hover: #3a3a3a;
+        --track: #333333;
+    }
 
-        @media (max-width: 768px) {
-            body { flex-direction: column; }
-            #toolbar { width: 100%; max-height: 45vh; border-right: none; border-bottom: 1px solid var(--panel-border); }
-            #canvas-container { flex: 1; min-height: 0; }
-            #canvas-wrapper { width: 95vmin; height: 95vmin; }
+    * { box-sizing: border-box; }
+
+    html, body { height: 100%; }
+
+    body {
+        margin: 0;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        display: flex;
+        height: 100vh;
+        height: 100dvh;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    #toolbar {
+        flex: 0 0 300px;
+        background: var(--panel);
+        border-right: 1px solid var(--panel-border);
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        z-index: 10;
+    }
+    #toolbar::-webkit-scrollbar { width: 8px; }
+    #toolbar::-webkit-scrollbar-track { background: transparent; }
+    #toolbar::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+
+    h1 {
+        font-size: 19px;
+        margin: 0 0 4px 0;
+        font-weight: 800;
+        letter-spacing: -0.4px;
+        text-align: center;
+        border-bottom: 1px solid var(--panel-border);
+        padding-bottom: 14px;
+    }
+
+    .group { border-bottom: 1px solid var(--panel-border); padding-bottom: 14px; }
+    .group:last-child { border-bottom: none; padding-bottom: 0; }
+
+    h3 {
+        margin: 0 0 10px 0;
+        font-size: 11px;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        letter-spacing: 1.5px;
+        font-weight: 700;
+    }
+
+    .control-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+    .control-group:last-child { margin-bottom: 0; }
+
+    label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-muted);
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 8px;
+    }
+    label .val { color: var(--text); font-variant-numeric: tabular-nums; }
+
+    kbd {
+        font-family: inherit;
+        font-size: 9px;
+        color: #777;
+        border: 1px solid #333;
+        border-radius: 3px;
+        padding: 0 3px;
+        line-height: 1.4;
+    }
+
+    input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 20px;
+        background: transparent;
+        cursor: pointer;
+        margin: 0;
+    }
+    input[type="range"]::-webkit-slider-runnable-track {
+        height: 4px; border-radius: 2px; background: var(--track);
+    }
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 16px; height: 16px; margin-top: -6px;
+        border-radius: 50%; background: #fff; border: none;
+        transition: transform .12s ease;
+    }
+    input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.15); }
+    input[type="range"]::-moz-range-track {
+        height: 4px; border-radius: 2px; background: var(--track);
+    }
+    input[type="range"]::-moz-range-thumb {
+        width: 16px; height: 16px; border: none; border-radius: 50%; background: #fff;
+    }
+
+    input[type="color"] {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 38px;
+        padding: 0;
+        border: 1px solid var(--panel-border);
+        border-radius: 8px;
+        background: var(--bg);
+        cursor: pointer;
+    }
+    input[type="color"]::-webkit-color-swatch-wrapper { padding: 4px; }
+    input[type="color"]::-webkit-color-swatch { border: none; border-radius: 5px; }
+    input[type="color"]::-moz-color-swatch { border: none; border-radius: 5px; }
+
+    select {
+        width: 100%;
+        padding: 9px;
+        background: var(--bg);
+        color: var(--text);
+        border: 1px solid var(--panel-border);
+        border-radius: 6px;
+        font-size: 13px;
+        cursor: pointer;
+    }
+    select:focus-visible,
+    input:focus-visible,
+    button:focus-visible {
+        outline: 2px solid #5b8cff;
+        outline-offset: 2px;
+    }
+
+    button {
+        background: var(--btn-bg);
+        color: var(--text);
+        border: 1px solid var(--panel-border);
+        padding: 10px;
+        border-radius: 6px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background .15s, color .15s, border-color .15s;
+        width: 100%;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-family: inherit;
+    }
+    button:hover { background: var(--btn-hover); }
+    button:active { transform: translateY(1px); }
+    button.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+    .checkbox-group { flex-direction: row; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .checkbox-group input[type="checkbox"] {
+        width: 16px; height: 16px; accent-color: #fff; cursor: pointer; margin: 0; flex: none;
+    }
+    .checkbox-group label {
+        text-transform: none;
+        color: var(--text);
+        cursor: pointer;
+        font-size: 13px;
+        letter-spacing: 0;
+        margin: 0;
+        justify-content: flex-start;
+    }
+
+    .btn-row { display: flex; gap: 8px; margin-bottom: 8px; }
+    .btn-row:last-child { margin-bottom: 0; }
+
+    #canvas-container {
+        flex: 1 1 auto;
+        min-width: 0;
+        min-height: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        overflow: hidden;
+        padding: 14px;
+        background-color: #0a0a0a;
+        background-image:
+            linear-gradient(45deg, #131313 25%, transparent 25%),
+            linear-gradient(-45deg, #131313 25%, transparent 25%),
+            linear-gradient(45deg, transparent 75%, #131313 75%),
+            linear-gradient(-45deg, transparent 75%, #131313 75%);
+        background-size: 20px 20px;
+        background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+    }
+
+    #canvas-wrapper {
+        position: relative;
+        width: 600px;
+        height: 600px;
+        max-width: 100%;
+        max-height: 100%;
+        background-color: #fff;
+        box-shadow: 0 0 40px rgba(0, 0, 0, .85);
+    }
+
+    #mainCanvas, #overlayCanvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        background: transparent;
+    }
+    #mainCanvas { z-index: 2; cursor: crosshair; touch-action: none; }
+    #overlayCanvas { z-index: 3; pointer-events: none; }
+
+    @media (max-width: 768px) {
+        body { flex-direction: column; }
+        #toolbar {
+            flex: 0 0 auto;
+            width: 100%;
+            max-height: 44dvh;
+            border-right: none;
+            border-bottom: 1px solid var(--panel-border);
+            padding: 14px;
         }
-    </style>
+        #canvas-container { padding: 10px; }
+    }
+</style>
 </head>
 <body>
-    <div id="toolbar">
-        <h1>Radial Art</h1>
-        
-        <div class="group">
-            <h3>Brush</h3>
-            <div class="control-group">
-                <label>Shape</label>
-                <select id="brushShape" title="Choose the shape of the brush stamp. Round creates smooth lines, while shapes create geometric patterns.">
-                    <option value="round">Round</option>
-                    <option value="square">Square</option>
-                    <option value="triangle">Triangle</option>
-                    <option value="star">Star</option>
-                </select>
-            </div>
-            <div class="control-group">
-                <label>Color</label>
-                <input type="color" id="colorPicker" value="#000000" title="The primary color of your brush stroke.">
-            </div>
-            <div class="control-group">
-                <label>Size: <span id="sizeValue">8</span>px</label>
-                <input type="range" id="brushSize" min="1" max="100" value="8" title="Adjusts the thickness of the brush. Higher values create thicker lines.">
-            </div>
-            <div class="control-group">
-                <label>Opacity: <span id="opacityValue">100</span>%</label>
-                <input type="range" id="brushOpacity" min="1" max="100" value="100" title="Controls the transparency of the brush. Lower values create see-through strokes.">
-            </div>
-            <div class="control-group">
-                <label>Hardness: <span id="hardnessValue">0</span></label>
-                <input type="range" id="brushHardness" min="0" max="50" value="0" title="Controls the softness of the brush edge. Higher values create a blurry, glowing effect.">
-            </div>
-            <div class="control-group checkbox-group">
-                <input type="checkbox" id="rainbowMode" title="Automatically shifts the brush color through the rainbow spectrum as you draw.">
-                <label for="rainbowMode">Rainbow Gradient</label>
-            </div>
-            <div class="control-group">
-                <label>Blend Mode</label>
-                <select id="blendMode" title="How the brush interacts with existing colors. Additive creates glowing overlaps, Multiply darkens.">
-                    <option value="source-over">Normal</option>
-                    <option value="lighter">Additive (Glow)</option>
-                    <option value="multiply">Multiply (Darken)</option>
-                </select>
-            </div>
+
+<div id="toolbar">
+    <h1>Radial Art</h1>
+
+    <div class="group">
+        <h3>Brush</h3>
+
+        <div class="control-group">
+            <label for="brushShape">Shape</label>
+            <select id="brushShape" title="Choose the shape of the brush stamp.">
+                <option value="round">Round</option>
+                <option value="square">Square</option>
+                <option value="triangle">Triangle</option>
+                <option value="star">Star</option>
+            </select>
         </div>
 
-        <div class="group">
-            <h3>Symmetry</h3>
-            <div class="control-group">
-                <label>Segments: <span id="segmentValue">8</span></label>
-                <input type="range" id="segments" min="1" max="36" value="8" title="The number of times your stroke is repeated around the center.">
-            </div>
-            <div class="control-group">
-                <label>Rotation: <span id="rotValue">0</span>°</label>
-                <input type="range" id="symRotation" min="0" max="360" value="0" title="Rotates the entire symmetry pattern around the center point.">
-            </div>
-            <div class="control-group checkbox-group">
-                <input type="checkbox" id="mirrorMode" title="Mirrors each segment, creating a true kaleidoscope effect instead of pure rotation.">
-                <label for="mirrorMode">Kaleidoscope (Mirror)</label>
-            </div>
-            <div class="control-group checkbox-group">
-                <input type="checkbox" id="directionLock" title="Locks your stroke to the exact angle of your first movement, allowing perfectly straight radial lines.">
-                <label for="directionLock">Direction Lock</label>
-            </div>
+        <div class="control-group">
+            <label for="colorPicker">Color</label>
+            <input type="color" id="colorPicker" value="#000000" title="The primary color of your brush stroke.">
         </div>
 
-        <div class="group">
-            <h3>Canvas</h3>
-            <div class="control-group">
-                <label>Background Color</label>
-                <input type="color" id="bgColor" value="#ffffff" title="Sets the background color of the canvas. This will be included in your exported PNG.">
-            </div>
-            <div class="control-group checkbox-group">
-                <input type="checkbox" id="transparentBg" title="Makes the canvas background transparent. The exported PNG will have no background.">
-                <label for="transparentBg">Transparent Background</label>
-            </div>
-            <div class="control-group checkbox-group">
-                <input type="checkbox" id="showGuides" checked title="Shows red/white guide lines indicating where your symmetry segments will appear.">
-                <label for="showGuides">Show Symmetry Guides</label>
-            </div>
+        <div class="control-group">
+            <label for="brushSize">
+                <span>Size</span>
+                <span class="val"><span id="sizeValue">8</span>px <kbd>[</kbd><kbd>]</kbd></span>
+            </label>
+            <input type="range" id="brushSize" min="1" max="120" value="8" title="Brush thickness">
         </div>
 
-        <div class="group">
-            <div style="display:flex; gap:8px; margin-bottom:8px;">
-                <button id="undoBtn" title="Revert to the previous state (Ctrl+Z)">Undo</button>
-                <button id="redoBtn" title="Reapply the last undone state (Ctrl+Y)">Redo</button>
-            </div>
-            <div style="display:flex; gap:8px; margin-bottom:8px;">
-                <button id="eraserBtn" title="Toggle eraser mode. Erases strokes instead of drawing them (E)">Eraser: OFF</button>
-            </div>
-            <button id="clearBtn" title="Wipe the entire canvas clean and start over.">Clear Canvas</button>
-            <button id="exportBtn" style="margin-top: 8px;" title="Download your artwork as a high-resolution PNG image.">Export PNG</button>
+        <div class="control-group">
+            <label for="brushOpacity">
+                <span>Opacity</span><span class="val"><span id="opacityValue">100</span>%</span>
+            </label>
+            <input type="range" id="brushOpacity" min="1" max="100" value="100">
+        </div>
+
+        <div class="control-group">
+            <label for="brushSoftness">
+                <span>Softness</span><span class="val"><span id="softnessValue">0</span></span>
+            </label>
+            <input type="range" id="brushSoftness" min="0" max="60" value="0" title="Softens the brush edge">
+        </div>
+
+        <div class="control-group checkbox-group">
+            <input type="checkbox" id="rainbowMode" title="Shifts the brush color through the rainbow (R)">
+            <label for="rainbowMode">Rainbow Gradient <kbd>R</kbd></label>
+        </div>
+
+        <div class="control-group">
+            <label for="blendMode">Blend Mode</label>
+            <select id="blendMode" title="How the brush interacts with existing colors.">
+                <option value="source-over">Normal</option>
+                <option value="lighter">Additive (Glow)</option>
+                <option value="multiply">Multiply (Darken)</option>
+            </select>
         </div>
     </div>
 
-    <div id="canvas-container">
-        <div id="canvas-wrapper">
-            <canvas id="mainCanvas" width="1200" height="1200"></canvas>
-            <canvas id="overlayCanvas" width="1200" height="1200"></canvas>
+    <div class="group">
+        <h3>Symmetry</h3>
+
+        <div class="control-group">
+            <label for="segments">
+                <span>Segments</span><span class="val" id="segmentValue">8</span>
+            </label>
+            <input type="range" id="segments" min="1" max="36" value="8" title="Number of repetitions">
+        </div>
+
+        <div class="control-group">
+            <label for="symRotation">
+                <span>Rotation</span><span class="val"><span id="rotValue">0</span>°</span>
+            </label>
+            <input type="range" id="symRotation" min="0" max="360" value="0">
+        </div>
+
+        <div class="control-group checkbox-group">
+            <input type="checkbox" id="mirrorMode" title="Mirrors each segment (kaleidoscope) — M">
+            <label for="mirrorMode">Kaleidoscope <kbd>M</kbd></label>
+        </div>
+
+        <div class="control-group checkbox-group">
+            <input type="checkbox" id="directionLock" title="Locks the stroke to the angle of the first movement">
+            <label for="directionLock">Direction Lock</label>
         </div>
     </div>
 
-    <script>
-        const mainCanvas = document.getElementById('mainCanvas');
-        const ctx = mainCanvas.getContext('2d', { willReadFrequently: true });
-        const overlay = document.getElementById('overlayCanvas');
-        const overlayCtx = overlay.getContext('2d');
-        const wrapper = document.getElementById('canvas-wrapper');
+    <div class="group">
+        <h3>Canvas</h3>
 
-        const bgCanvas = document.createElement('canvas');
-        bgCanvas.width = 1200; bgCanvas.height = 1200;
-        const bgCtx = bgCanvas.getContext('2d');
+        <div class="control-group">
+            <label for="bgColor">Background Color</label>
+            <input type="color" id="bgColor" value="#ffffff">
+        </div>
 
-        let isDrawing = false;
-        let startX = 0, startY = 0, lastX = 0, lastY = 0;
-        let history = [];
-        let historyStep = -1;
-        let isEraser = false;
-        let hue = 0;
-        
-        // Direction Lock State
-        let lockedAngle = null;
+        <div class="control-group checkbox-group">
+            <input type="checkbox" id="transparentBg" title="Transparent background — T">
+            <label for="transparentBg">Transparent <kbd>T</kbd></label>
+        </div>
 
-        // UI Elements
-        const colorPicker = document.getElementById('colorPicker');
-        const brushSize = document.getElementById('brushSize');
-        const brushOpacity = document.getElementById('brushOpacity');
-        const brushHardness = document.getElementById('brushHardness');
-        const brushShape = document.getElementById('brushShape');
-        const rainbowMode = document.getElementById('rainbowMode');
-        const blendMode = document.getElementById('blendMode');
-        const segmentsInput = document.getElementById('segments');
-        const symRotation = document.getElementById('symRotation');
-        const mirrorMode = document.getElementById('mirrorMode');
-        const directionLock = document.getElementById('directionLock');
-        const bgColor = document.getElementById('bgColor');
-        const transparentBg = document.getElementById('transparentBg');
-        const showGuides = document.getElementById('showGuides');
-        const eraserBtn = document.getElementById('eraserBtn');
+        <div class="control-group checkbox-group">
+            <input type="checkbox" id="showGuides" checked title="Show symmetry guides — G">
+            <label for="showGuides">Show Guides <kbd>G</kbd></label>
+        </div>
 
-        function init() {
-            updateBackground();
-            clearCanvas(false);
-            drawGuides();
-            saveState();
+        <div class="control-group">
+            <label for="guideColor">Guide Color</label>
+            <input type="color" id="guideColor" value="#ff0055">
+        </div>
+    </div>
+
+    <div class="group">
+        <div class="btn-row">
+            <button id="undoBtn" title="Undo (Ctrl+Z)">Undo</button>
+            <button id="redoBtn" title="Redo (Ctrl+Shift+Z)">Redo</button>
+        </div>
+        <div class="btn-row">
+            <button id="eraserBtn" title="Toggle Eraser (E)">Eraser: OFF</button>
+        </div>
+        <div class="btn-row">
+            <button id="clearBtn" title="Clear Canvas (Backspace)">Clear</button>
+            <button id="exportBtn" title="Export PNG (Ctrl+S)">Export PNG</button>
+        </div>
+    </div>
+</div>
+
+<div id="canvas-container">
+    <div id="canvas-wrapper">
+        <canvas id="mainCanvas" width="1200" height="1200"></canvas>
+        <canvas id="overlayCanvas" width="1200" height="1200"></canvas>
+    </div>
+</div>
+
+<script>
+(() => {
+    'use strict';
+
+    const $ = id => document.getElementById(id);
+
+    const mainCanvas   = $('mainCanvas');
+    const ctx          = mainCanvas.getContext('2d');
+    const overlay      = $('overlayCanvas');
+    const overlayCtx   = overlay.getContext('2d');
+    const wrapper      = $('canvas-wrapper');
+    const container    = $('canvas-container');
+
+    const W = mainCanvas.width;
+    const H = mainCanvas.height;
+    const CX = W / 2;
+    const CY = H / 2;
+
+    const MAX_HISTORY = 20;
+
+    const bgCanvas = document.createElement('canvas');
+    bgCanvas.width = W;
+    bgCanvas.height = H;
+    const bgCtx = bgCanvas.getContext('2d');
+
+    const colorPicker    = $('colorPicker');
+    const brushSize      = $('brushSize');
+    const brushOpacity   = $('brushOpacity');
+    const brushSoftness  = $('brushSoftness');
+    const brushShape     = $('brushShape');
+    const rainbowMode    = $('rainbowMode');
+    const blendMode      = $('blendMode');
+    const segmentsInput  = $('segments');
+    const symRotation    = $('symRotation');
+    const mirrorMode     = $('mirrorMode');
+    const directionLock  = $('directionLock');
+    const bgColor        = $('bgColor');
+    const transparentBg  = $('transparentBg');
+    const showGuides     = $('showGuides');
+    const guideColor     = $('guideColor');
+    const eraserBtn      = $('eraserBtn');
+
+    let isDrawing   = false;
+    let startX = 0, startY = 0;
+    let lastX  = 0, lastY  = 0;
+    let prevMidX = 0, prevMidY = 0;
+    let lockedAngle = null;
+    let hue = 0;
+    let isEraser = false;
+
+    let history = [];
+    let historyStep = -1;
+
+    function snapshot() {
+        const c = document.createElement('canvas');
+        c.width = W;
+        c.height = H;
+        c.getContext('2d').drawImage(mainCanvas, 0, 0);
+        return c;
+    }
+
+    function saveState() {
+        history.length = historyStep + 1;
+        history.push(snapshot());
+        if (history.length > MAX_HISTORY) history.shift();
+        historyStep = history.length - 1;
+    }
+
+    function restoreState() {
+        const snap = history[historyStep];
+        if (!snap) return;
+        resetCtxState();
+        ctx.clearRect(0, 0, W, H);
+        ctx.drawImage(snap, 0, 0);
+    }
+
+    const undo = () => { if (historyStep > 0) { historyStep--; restoreState(); } };
+    const redo = () => { if (historyStep < history.length - 1) { historyStep++; restoreState(); } };
+
+    function resetCtxState() {
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = 'transparent';
+    }
+
+    function clearCanvas(pushHistory = true) {
+        resetCtxState();
+        ctx.clearRect(0, 0, W, H);
+        if (pushHistory) saveState();
+    }
+
+    function updateBackground() {
+        const transparent = transparentBg.checked;
+        bgCtx.clearRect(0, 0, W, H);
+        if (!transparent) {
+            bgCtx.fillStyle = bgColor.value;
+            bgCtx.fillRect(0, 0, W, H);
         }
+        wrapper.style.backgroundColor = transparent ? 'transparent' : bgColor.value;
+    }
 
-        function saveState() {
-            historyStep++;
-            if (historyStep < history.length) history.length = historyStep;
-            history.push(mainCanvas.toDataURL());
-            if (history.length > 40) { history.shift(); historyStep--; }
-        }
+    function drawGuides() {
+        overlayCtx.clearRect(0, 0, W, H);
+        if (!showGuides.checked) return;
 
-        function undo() {
-            if (historyStep > 0) { historyStep--; restoreState(); }
-        }
+        const segments = Math.max(1, parseInt(segmentsInput.value, 10));
+        const angleStep = (Math.PI * 2) / segments;
+        const rotOffset = (parseFloat(symRotation.value) * Math.PI) / 180;
+        const maxDist = Math.hypot(W, H);
 
-        function redo() {
-            if (historyStep < history.length - 1) { historyStep++; restoreState(); }
-        }
+        overlayCtx.save();
+        overlayCtx.strokeStyle = guideColor.value;
+        overlayCtx.lineWidth = 1.5;
+        overlayCtx.setLineDash([8, 8]);
 
-        function restoreState() {
-            const img = new Image();
-            img.src = history[historyStep];
-            img.onload = () => {
-                ctx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
-                ctx.drawImage(img, 0, 0);
-            };
-        }
-
-        function clearCanvas(pushHistory = true) {
-            ctx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
-            if (pushHistory) saveState();
-        }
-
-        function updateBackground() {
-            const isTransparent = transparentBg.checked;
-            const color = bgColor.value;
-            
-            bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
-            if (!isTransparent) {
-                bgCtx.fillStyle = color;
-                bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
-            }
-            
-            wrapper.style.backgroundColor = isTransparent ? 'transparent' : color;
-        }
-
-        function drawGuides() {
-            overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
-            if (!showGuides.checked) return;
-
-            const cx = 600, cy = 600;
-            const segments = parseInt(segmentsInput.value);
-            const angleStep = (Math.PI * 2) / segments;
-            const rotOffset = (symRotation.value * Math.PI) / 180;
-            const maxDist = 1000;
-
-            overlayCtx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-            overlayCtx.lineWidth = 1.5;
-            overlayCtx.setLineDash([8, 8]);
-
-            for (let i = 0; i < segments; i++) {
-                const angle = (i * angleStep) + rotOffset;
-                overlayCtx.beginPath();
-                overlayCtx.moveTo(cx, cy);
-                overlayCtx.lineTo(cx + Math.cos(angle) * maxDist, cy + Math.sin(angle) * maxDist);
-                overlayCtx.stroke();
-            }
-            
+        for (let i = 0; i < segments; i++) {
+            const angle = i * angleStep + rotOffset;
             overlayCtx.beginPath();
-            overlayCtx.arc(cx, cy, 5, 0, Math.PI * 2);
-            overlayCtx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-            overlayCtx.setLineDash([]);
-            overlayCtx.fill();
+            overlayCtx.moveTo(CX, CY);
+            overlayCtx.lineTo(CX + Math.cos(angle) * maxDist, CY + Math.sin(angle) * maxDist);
+            overlayCtx.stroke();
         }
 
-        function getPos(e) {
-            const rect = mainCanvas.getBoundingClientRect();
-            const scaleX = mainCanvas.width / rect.width;
-            const scaleY = mainCanvas.height / rect.height;
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            return {
-                x: (clientX - rect.left) * scaleX,
-                y: (clientY - rect.top) * scaleY
-            };
+        overlayCtx.setLineDash([]);
+        overlayCtx.beginPath();
+        overlayCtx.arc(CX, CY, 4, 0, Math.PI * 2);
+        overlayCtx.fillStyle = guideColor.value;
+        overlayCtx.fill();
+        overlayCtx.restore();
+    }
+
+    function currentColor() {
+        return (rainbowMode.checked && !isEraser)
+            ? `hsl(${hue.toFixed(1)}, 100%, 50%)`
+            : colorPicker.value;
+    }
+
+    function applyBrushStyle() {
+        const color = currentColor();
+        const softness = parseInt(brushSoftness.value, 10);
+
+        ctx.globalAlpha = parseInt(brushOpacity.value, 10) / 100;
+        ctx.globalCompositeOperation = isEraser ? 'destination-out' : blendMode.value;
+
+        if (softness > 0) {
+            ctx.shadowBlur = softness;
+            ctx.shadowColor = color;
+        } else {
+            ctx.shadowBlur = 0;
         }
 
-        function drawShape(ctx, x, y, size, shape, angle = 0) {
-            ctx.beginPath();
-            if (shape === 'round') {
-                ctx.arc(x, y, size / 2, 0, Math.PI * 2);
-                ctx.fill();
-            } else if (shape === 'square') {
+        ctx.fillStyle = color;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = parseInt(brushSize.value, 10);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+    }
+
+    function drawShape(x, y, size, shape, angle) {
+        ctx.beginPath();
+        switch (shape) {
+            case 'square':
                 ctx.rect(x - size / 2, y - size / 2, size, size);
                 ctx.fill();
-            } else if (shape === 'triangle') {
+                break;
+
+            case 'triangle': {
                 ctx.save();
                 ctx.translate(x, y);
                 ctx.rotate(angle);
@@ -348,221 +556,328 @@
                 ctx.closePath();
                 ctx.fill();
                 ctx.restore();
-            } else if (shape === 'star') {
+                break;
+            }
+
+            case 'star': {
                 ctx.save();
                 ctx.translate(x, y);
                 ctx.rotate(angle);
-                const spikes = 5, outerRadius = size / 2, innerRadius = size / 4;
-                let rot = Math.PI / 2 * 3;
-                let step = Math.PI / spikes;
-                ctx.moveTo(0, 0 - outerRadius);
+                const spikes = 5;
+                const outerR = size / 2;
+                const innerR = size / 4;
+                let rot = -Math.PI / 2;
+                const step = Math.PI / spikes;
+                ctx.moveTo(0, -outerR);
                 for (let i = 0; i < spikes; i++) {
-                    ctx.lineTo(Math.cos(rot) * outerRadius, Math.sin(rot) * outerRadius);
+                    ctx.lineTo(Math.cos(rot) * outerR, Math.sin(rot) * outerR);
                     rot += step;
-                    ctx.lineTo(Math.cos(rot) * innerRadius, Math.sin(rot) * innerRadius);
+                    ctx.lineTo(Math.cos(rot) * innerR, Math.sin(rot) * innerR);
                     rot += step;
                 }
-                ctx.lineTo(0, 0 - outerRadius);
                 ctx.closePath();
                 ctx.fill();
                 ctx.restore();
+                break;
             }
+
+            default:
+                ctx.arc(x, y, size / 2, 0, Math.PI * 2);
+                ctx.fill();
         }
+    }
 
-        function draw(e) {
-            if (!isDrawing) return;
-            
-            let pos = getPos(e);
-            
-            // Direction Lock Logic
-            if (directionLock.checked) {
-                if (lockedAngle === null) {
-                    const dx = pos.x - startX;
-                    const dy = pos.y - startY;
-                    if (Math.hypot(dx, dy) > 5) {
-                        lockedAngle = Math.atan2(dy, dx);
-                    }
-                }
-                if (lockedAngle !== null) {
-                    const dx = pos.x - startX;
-                    const dy = pos.y - startY;
-                    const dist = dx * Math.cos(lockedAngle) + dy * Math.sin(lockedAngle);
-                    pos.x = startX + dist * Math.cos(lockedAngle);
-                    pos.y = startY + dist * Math.sin(lockedAngle);
-                }
-            }
+    function makeToLocal(theta, sign) {
+        const c = Math.cos(-theta);
+        const s = Math.sin(-theta);
+        return (x, y) => {
+            const dx = x - CX;
+            const dy = y - CY;
+            const lx = dx * c - dy * s;
+            const ly = dx * s + dy * c;
+            return { x: lx, y: sign < 0 ? -ly : ly };
+        };
+    }
 
-            const cx = 600, cy = 600;
-            const segments = parseInt(segmentsInput.value);
-            const angleStep = (Math.PI * 2) / segments;
-            const rotOffset = (symRotation.value * Math.PI) / 180;
-            const size = parseInt(brushSize.value);
-            const shape = brushShape.value;
-            const moveAngle = Math.atan2(pos.y - lastY, pos.x - lastX);
+    function forEachSymmetry(fn) {
+        const segments = Math.max(1, parseInt(segmentsInput.value, 10));
+        const angleStep = (Math.PI * 2) / segments;
+        const rotOffset = (parseFloat(symRotation.value) * Math.PI) / 180;
+        const mirrored = mirrorMode.checked;
 
-            ctx.globalAlpha = brushOpacity.value / 100;
-            ctx.globalCompositeOperation = isEraser ? 'destination-out' : blendMode.value;
-            ctx.shadowBlur = parseInt(brushHardness.value);
-            ctx.shadowColor = rainbowMode.checked ? `hsl(${hue}, 100%, 50%)` : colorPicker.value;
+        for (let i = 0; i < segments; i++) {
+            const theta = i * angleStep + rotOffset;
 
-            if (rainbowMode.checked && !isEraser) {
-                hue = (hue + 2) % 360;
-                ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
-                ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
-            } else {
-                ctx.fillStyle = colorPicker.value;
-                ctx.strokeStyle = colorPicker.value;
-            }
+            ctx.save();
+            ctx.translate(CX, CY);
+            ctx.rotate(theta);
+            fn(makeToLocal(theta, 1));
+            ctx.restore();
 
-            ctx.lineWidth = size;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-
-            for (let i = 0; i < segments; i++) {
+            if (mirrored) {
                 ctx.save();
-                ctx.translate(cx, cy);
-                ctx.rotate(i * angleStep + rotOffset);
-                
-                const lx = lastX - cx, ly = lastY - cy;
-                const px = pos.x - cx, py = pos.y - cy;
-
-                if (shape === 'round') {
-                    ctx.beginPath();
-                    ctx.moveTo(lx, ly);
-                    ctx.lineTo(px, py);
-                    ctx.stroke();
-                } else {
-                    const dist = Math.hypot(px - lx, py - ly);
-                    const steps = Math.max(1, Math.floor(dist / (size / 4)));
-                    for (let s = 0; s <= steps; s++) {
-                        const t = s / steps;
-                        const sx = lx + (px - lx) * t;
-                        const sy = ly + (py - ly) * t;
-                        drawShape(ctx, sx, sy, size, shape, moveAngle + (i * angleStep + rotOffset));
-                    }
-                }
-
-                if (mirrorMode.checked) {
-                    ctx.scale(1, -1);
-                    if (shape === 'round') {
-                        ctx.beginPath();
-                        ctx.moveTo(lx, ly);
-                        ctx.lineTo(px, py);
-                        ctx.stroke();
-                    } else {
-                        const dist = Math.hypot(px - lx, py - ly);
-                        const steps = Math.max(1, Math.floor(dist / (size / 4)));
-                        for (let s = 0; s <= steps; s++) {
-                            const t = s / steps;
-                            const sx = lx + (px - lx) * t;
-                            const sy = ly + (py - ly) * t;
-                            drawShape(ctx, sx, sy, size, shape, -moveAngle + (i * angleStep + rotOffset));
-                        }
-                    }
-                }
+                ctx.translate(CX, CY);
+                ctx.rotate(theta);
+                ctx.scale(1, -1);
+                fn(makeToLocal(theta, -1));
                 ctx.restore();
             }
-            
-            ctx.shadowBlur = 0;
-            ctx.globalAlpha = 1;
-            ctx.globalCompositeOperation = 'source-over';
-
-            lastX = pos.x; lastY = pos.y;
-            if (e.cancelable) e.preventDefault();
         }
+    }
 
-        function stopDrawing() {
-            if (isDrawing) {
-                isDrawing = false;
-                lockedAngle = null; // Reset direction lock for next stroke
-                saveState();
+    function stampDot() {
+        const size = parseInt(brushSize.value, 10);
+        const shape = brushShape.value;
+
+        applyBrushStyle();
+        forEachSymmetry(toLocal => {
+            const p = toLocal(lastX, lastY);
+            drawShape(p.x, p.y, size, shape, 0);
+        });
+    }
+
+    function drawSegment(x0, y0, x1, y1, midX, midY, smooth) {
+        const size = parseInt(brushSize.value, 10);
+        const shape = brushShape.value;
+
+        applyBrushStyle();
+
+        forEachSymmetry(toLocal => {
+            const a = toLocal(x0, y0);
+            const b = toLocal(x1, y1);
+
+            if (shape === 'round') {
+                ctx.beginPath();
+                if (smooth) {
+                    const m0 = toLocal(prevMidX, prevMidY);
+                    const m1 = toLocal(midX, midY);
+                    ctx.moveTo(m0.x, m0.y);
+                    ctx.quadraticCurveTo(a.x, a.y, m1.x, m1.y);
+                } else {
+                    ctx.moveTo(a.x, a.y);
+                    ctx.lineTo(b.x, b.y);
+                }
+                ctx.stroke();
+                return;
             }
-        }
 
-        // GLOBAL EVENT LISTENERS (Fixes the "can't draw" bug)
-        window.addEventListener('mousedown', (e) => {
-            if (e.target === mainCanvas) {
-                isDrawing = true;
-                const pos = getPos(e);
-                startX = lastX = pos.x;
-                startY = lastY = pos.y;
-                lockedAngle = null;
+            const localAngle = Math.atan2(b.y - a.y, b.x - a.x);
+            const dist = Math.hypot(b.x - a.x, b.y - a.y);
+            const spacing = Math.max(1, size / 4);
+            const steps = Math.min(400, Math.max(1, Math.ceil(dist / spacing)));
+
+            for (let s = 1; s <= steps; s++) {
+                const t = s / steps;
+                drawShape(
+                    a.x + (b.x - a.x) * t,
+                    a.y + (b.y - a.y) * t,
+                    size, shape, localAngle
+                );
             }
         });
+    }
 
-        window.addEventListener('mousemove', (e) => {
-            if (isDrawing) draw(e);
-        });
+    function getPos(e) {
+        const rect = mainCanvas.getBoundingClientRect();
+        return {
+            x: (e.clientX - rect.left) * (W / rect.width),
+            y: (e.clientY - rect.top) * (H / rect.height)
+        };
+    }
 
-        window.addEventListener('mouseup', stopDrawing);
+    function onPointerDown(e) {
+        if (!e.isPrimary) return;
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        e.preventDefault();
 
-        window.addEventListener('touchstart', (e) => {
-            if (e.target === mainCanvas) {
-                isDrawing = true;
-                const pos = getPos(e);
-                startX = lastX = pos.x;
-                startY = lastY = pos.y;
-                lockedAngle = null;
+        isDrawing = true;
+        const p = getPos(e);
+        startX = lastX = prevMidX = p.x;
+        startY = lastY = prevMidY = p.y;
+        lockedAngle = null;
+
+        try { mainCanvas.setPointerCapture(e.pointerId); } catch (_) {}
+
+        stampDot();
+    }
+
+    function onPointerMove(e) {
+        if (!isDrawing || !e.isPrimary) return;
+        e.preventDefault();
+
+        let p = getPos(e);
+
+        if (directionLock.checked) {
+            const dx = p.x - startX;
+            const dy = p.y - startY;
+            if (lockedAngle === null && Math.hypot(dx, dy) > 4) {
+                lockedAngle = Math.atan2(dy, dx);
             }
-        }, { passive: true });
+            if (lockedAngle !== null) {
+                const proj = dx * Math.cos(lockedAngle) + dy * Math.sin(lockedAngle);
+                p = {
+                    x: startX + proj * Math.cos(lockedAngle),
+                    y: startY + proj * Math.sin(lockedAngle)
+                };
+            }
+        }
 
-        window.addEventListener('touchmove', (e) => {
-            if (isDrawing) {
-                draw(e);
+        const dx = p.x - lastX;
+        const dy = p.y - lastY;
+        const dist = Math.hypot(dx, dy);
+        if (dist < 0.75) return;
+
+        if (rainbowMode.checked && !isEraser) {
+            hue = (hue + dist * 0.45) % 360;
+        }
+
+        const smooth = brushShape.value === 'round';
+        const midX = (lastX + p.x) / 2;
+        const midY = (lastY + p.y) / 2;
+
+        drawSegment(lastX, lastY, p.x, p.y, midX, midY, smooth);
+
+        lastX = p.x;
+        lastY = p.y;
+        prevMidX = midX;
+        prevMidY = midY;
+    }
+
+    function onPointerUp(e) {
+        if (!isDrawing) return;
+        isDrawing = false;
+        lockedAngle = null;
+
+        try {
+            if (mainCanvas.hasPointerCapture(e.pointerId)) {
+                mainCanvas.releasePointerCapture(e.pointerId);
+            }
+        } catch (_) {}
+
+        resetCtxState();
+        saveState();
+    }
+
+    mainCanvas.addEventListener('pointerdown', onPointerDown);
+    mainCanvas.addEventListener('pointermove', onPointerMove);
+    mainCanvas.addEventListener('pointerup', onPointerUp);
+    mainCanvas.addEventListener('pointercancel', onPointerUp);
+    mainCanvas.addEventListener('contextmenu', e => e.preventDefault());
+
+    function exportPNG() {
+        const out = document.createElement('canvas');
+        out.width = W;
+        out.height = H;
+        const octx = out.getContext('2d');
+
+        if (!transparentBg.checked) octx.drawImage(bgCanvas, 0, 0);
+        octx.drawImage(mainCanvas, 0, 0);
+
+        const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+        const link = document.createElement('a');
+        link.download = `radial-art-${stamp}.png`;
+        link.href = out.toDataURL('image/png');
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+    }
+
+    function resizeWrapper() {
+        const pad = 28;
+        const size = Math.max(
+            120,
+            Math.min(container.clientWidth, container.clientHeight) - pad
+        );
+        wrapper.style.width = size + 'px';
+        wrapper.style.height = size + 'px';
+    }
+
+    if (window.ResizeObserver) {
+        new ResizeObserver(resizeWrapper).observe(container);
+    } else {
+        window.addEventListener('resize', resizeWrapper);
+    }
+
+    const bindRangeLabel = (input, labelId) => {
+        const label = $(labelId);
+        const sync = () => { label.textContent = input.value; };
+        input.addEventListener('input', sync);
+        sync();
+    };
+
+    bindRangeLabel(brushSize, 'sizeValue');
+    bindRangeLabel(brushOpacity, 'opacityValue');
+    bindRangeLabel(brushSoftness, 'softnessValue');
+    bindRangeLabel(segmentsInput, 'segmentValue');
+    bindRangeLabel(symRotation, 'rotValue');
+
+    [segmentsInput, symRotation, mirrorMode, showGuides, guideColor].forEach(node => {
+        node.addEventListener('input', drawGuides);
+        node.addEventListener('change', drawGuides);
+    });
+
+    bgColor.addEventListener('input', updateBackground);
+    transparentBg.addEventListener('change', updateBackground);
+
+    eraserBtn.addEventListener('click', () => {
+        isEraser = !isEraser;
+        eraserBtn.textContent = isEraser ? 'Eraser: ON' : 'Eraser: OFF';
+        eraserBtn.classList.toggle('active', isEraser);
+    });
+
+    $('undoBtn').addEventListener('click', undo);
+    $('redoBtn').addEventListener('click', redo);
+    $('clearBtn').addEventListener('click', () => clearCanvas(true));
+    $('exportBtn').addEventListener('click', exportPNG);
+
+    window.addEventListener('keydown', e => {
+        const active = document.activeElement;
+        const isTypingField = active && (
+            active.tagName === 'TEXTAREA' ||
+            active.tagName === 'SELECT' ||
+            (active.tagName === 'INPUT' && active.type !== 'range')
+        );
+
+        const mod = e.ctrlKey || e.metaKey;
+        const key = e.key.toLowerCase();
+
+        if (mod && key === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
+        if (mod && key === 'y') { e.preventDefault(); redo(); return; }
+        if (mod && key === 's') { e.preventDefault(); exportPNG(); return; }
+
+        if (isTypingField) return;
+
+        switch (key) {
+            case 'backspace':
+            case 'delete':
                 e.preventDefault();
-            }
-        }, { passive: false });
+                clearCanvas(true);
+                return;
+            case 'r': rainbowMode.click(); return;
+            case 'm': mirrorMode.click(); return;
+            case 't': transparentBg.click(); return;
+            case 'e': eraserBtn.click(); return;
+            case 'g':
+                showGuides.checked = !showGuides.checked;
+                drawGuides();
+                return;
+            case '[':
+                brushSize.value = Math.max(1, parseInt(brushSize.value, 10) - 2);
+                brushSize.dispatchEvent(new Event('input'));
+                return;
+            case ']':
+                brushSize.value = Math.min(120, parseInt(brushSize.value, 10) + 2);
+                brushSize.dispatchEvent(new Event('input'));
+                return;
+        }
+    });
 
-        window.addEventListener('touchend', stopDrawing);
-        window.addEventListener('touchcancel', stopDrawing);
-
-        // UI Listeners
-        brushSize.addEventListener('input', (e) => document.getElementById('sizeValue').textContent = e.target.value);
-        brushOpacity.addEventListener('input', (e) => document.getElementById('opacityValue').textContent = e.target.value);
-        brushHardness.addEventListener('input', (e) => document.getElementById('hardnessValue').textContent = e.target.value);
-        segmentsInput.addEventListener('input', (e) => document.getElementById('segmentValue').textContent = e.target.value);
-        symRotation.addEventListener('input', (e) => document.getElementById('rotValue').textContent = e.target.value);
-
-        [segmentsInput, symRotation, mirrorMode, showGuides].forEach(el => {
-            el.addEventListener('input', drawGuides);
-        });
-
-        bgColor.addEventListener('input', updateBackground);
-        transparentBg.addEventListener('change', updateBackground);
-
-        eraserBtn.addEventListener('click', () => {
-            isEraser = !isEraser;
-            eraserBtn.textContent = isEraser ? 'Eraser: ON' : 'Eraser: OFF';
-            eraserBtn.classList.toggle('active', isEraser);
-        });
-
-        document.getElementById('undoBtn').addEventListener('click', undo);
-        document.getElementById('redoBtn').addEventListener('click', redo);
-        document.getElementById('clearBtn').addEventListener('click', () => clearCanvas(true));
-        
-        document.getElementById('exportBtn').addEventListener('click', () => {
-            const exportCanvas = document.createElement('canvas');
-            exportCanvas.width = 1200; exportCanvas.height = 1200;
-            const expCtx = exportCanvas.getContext('2d');
-            
-            if (!transparentBg.checked) expCtx.drawImage(bgCanvas, 0, 0);
-            expCtx.drawImage(mainCanvas, 0, 0);
-            
-            const link = document.createElement('a');
-            link.download = `radial-art-${Date.now()}.png`;
-            link.href = exportCanvas.toDataURL('image/png');
-            link.click();
-        });
-
-        // Keybinds
-        window.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); }
-            if (e.ctrlKey && (e.key === 'y' || (e.shiftKey && e.key === 'Z'))) { e.preventDefault(); redo(); }
-            if (e.key === 'g' || e.key === 'G') { showGuides.checked = !showGuides.checked; drawGuides(); }
-            if (e.key === 'e' || e.key === 'E') { eraserBtn.click(); }
-        });
-
-        init();
-    </script>
+    resizeWrapper();
+    updateBackground();
+    clearCanvas(false);
+    drawGuides();
+    saveState();
+})();
+</script>
 </body>
 </html>
